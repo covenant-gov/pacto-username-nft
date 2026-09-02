@@ -28,6 +28,9 @@ interface IPactoGlobalPaymaster {
   /// @notice Thrown when UserOp calldata is not a supported execute call
   error GlobalPaymaster_InvalidCallData();
 
+  /// @notice Thrown when a custom policy address is supplied on the member path
+  error GlobalPaymaster_CustomPolicyNotAllowed();
+
   /// @notice Thrown when a required address is zero
   error GlobalPaymaster_ZeroAddress();
 }

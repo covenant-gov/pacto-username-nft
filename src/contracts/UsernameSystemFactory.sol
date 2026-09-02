@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
+import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
 import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
@@ -45,17 +47,23 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
     USERNAME_NFT = address(new PactoUsernameNFT(owner));
     POLICY = address(new SponsorPolicyRegistry(owner));
 
+    address payable _bootstrapPool = payable(address(new BootstrapMintPool(address(this))));
+    address _bootstrapPolicy = address(new BootstrapClaimPolicy(PactoUsernameNFT(USERNAME_NFT)));
+
     PAYMASTER = address(
       new PactoGlobalPaymaster(
         entryPoint,
         PactoUsernameNFT(USERNAME_NFT),
         GlobalSponsorPool(payable(POOL)),
+        BootstrapMintPool(_bootstrapPool),
         SponsorPolicyRegistry(POLICY),
+        BootstrapClaimPolicy(_bootstrapPolicy),
         allowed7702Implementation
       )
     );
 
     GlobalSponsorPool(payable(POOL)).wirePaymaster(PAYMASTER);
+    BootstrapMintPool(_bootstrapPool).wirePaymaster(PAYMASTER);
   }
 
   /// @inheritdoc IUsernameSystemFactory

@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {SIG_VALIDATION_FAILED} from '@account-abstraction/core/Helpers.sol';
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
+import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
+import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
+import {IPactoGlobalPaymaster} from 'interfaces/IPactoGlobalPaymaster.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 import {UserOpCalldataLib} from 'contracts/utils/UserOpCalldataLib.sol';
@@ -31,7 +35,9 @@ contract UnitPactoGlobalPaymaster is Test {
   MockEntryPoint internal _entryPoint;
   PactoUsernameNFT internal _nft;
   GlobalSponsorPool internal _pool;
+  BootstrapMintPool internal _bootstrapPool;
   SponsorPolicyRegistry internal _policy;
+  BootstrapClaimPolicy internal _bootstrapPolicy;
   PactoGlobalPaymasterHarness internal _paymaster;
 
   function setUp() external {
@@ -40,43 +46,134 @@ contract UnitPactoGlobalPaymaster is Test {
 
     _entryPoint = new MockEntryPoint();
     _pool = new GlobalSponsorPool(_factory);
+    _bootstrapPool = new BootstrapMintPool(_factory);
     _nft = new PactoUsernameNFT(_owner);
     _policy = new SponsorPolicyRegistry(_owner);
+    _bootstrapPolicy = new BootstrapClaimPolicy(_nft);
 
-    _paymaster =
-      new PactoGlobalPaymasterHarness(IEntryPoint(address(_entryPoint)), _nft, _pool, _policy, makeAddr('allowed7702'));
+    _paymaster = new PactoGlobalPaymasterHarness(
+      IEntryPoint(address(_entryPoint)),
+      _nft,
+      _pool,
+      _bootstrapPool,
+      _policy,
+      _bootstrapPolicy,
+      makeAddr('allowed7702')
+    );
 
-    vm.prank(_factory);
+    vm.startPrank(_factory);
     _pool.wirePaymaster(address(_paymaster));
+    _bootstrapPool.wirePaymaster(address(_paymaster));
+    vm.stopPrank();
 
-    vm.deal(address(this), 10 ether);
+    vm.deal(address(this), 20 ether);
     _pool.deposit{value: 10 ether}();
-
-    _claimUsername();
-    vm.prank(_owner);
-    _policy.registerTarget(_target);
+    _bootstrapPool.deposit{value: 10 ether}();
   }
 
   function test_ExposedValidate_WhenMemberIsEligibleAndPolicyAllowsTheCall() external {
-    PackedUserOperation memory _userOp = _buildUserOp(_claimer, _target, hex'');
+    _claimUsername();
+    vm.prank(_owner);
+    _policy.registerTarget(_target);
+
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, _target, hex'', 0);
     _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
 
     (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
 
     assertEq(_validationData, 0);
-    assertGt(_context.length, 0);
+    assertEq(_context, hex'01');
   }
 
   function test_ExposedValidate_WhenPolicyDeniesTheCall() external {
-    address _deniedTarget = makeAddr('denied');
+    _claimUsername();
 
-    PackedUserOperation memory _userOp = _buildUserOp(_claimer, _deniedTarget, hex'');
+    address _deniedTarget = makeAddr('denied');
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, _deniedTarget, hex'', 0);
     _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
 
     (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
 
     assertEq(_validationData, SIG_VALIDATION_FAILED);
     assertEq(_context.length, 0);
+  }
+
+  function test_ExposedValidate_WhenCustomPolicyIsProvidedOnMemberPath() external {
+    _claimUsername();
+    vm.prank(_owner);
+    _policy.registerTarget(_target);
+
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, _target, hex'', 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, makeAddr('customPolicy'));
+
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_CustomPolicyNotAllowed.selector);
+    _paymaster.exposedValidate(_userOp, 1 ether);
+  }
+
+  function test_ExposedValidate_WhenBootstrapClaimIsValidWithoutAnNft() external {
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
+
+    assertEq(_validationData, 0);
+    assertEq(_context, hex'00');
+  }
+
+  function test_ExposedValidate_WhenBootstrapExecuteValueIsNonZero() external {
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 1);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
+
+    assertEq(_validationData, SIG_VALIDATION_FAILED);
+    assertEq(_context.length, 0);
+  }
+
+  function test_ExposedValidate_WhenBootstrapNpubHashDoesNotMatchPayload() external {
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 0);
+    _userOp.paymasterAndData = _buildPaymasterData(keccak256('other-npub'), _claimer, address(0));
+
+    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
+
+    assertEq(_validationData, SIG_VALIDATION_FAILED);
+    assertEq(_context.length, 0);
+  }
+
+  function test_ExposedValidate_WhenBootstrapPoolHasInsufficientHeadroom() external {
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 10 ether);
+
+    assertEq(_validationData, SIG_VALIDATION_FAILED);
+    assertEq(_context.length, 0);
+  }
+
+  function test_ExposedPostOp_WhenBootstrapPathBillsBootstrapPool() external {
+    uint256 _poolBefore = _bootstrapPool.spendablePoolWei();
+    uint256 _paymasterBefore = address(_paymaster).balance;
+
+    _paymaster.exposedPostOp(IPaymaster.PostOpMode.opSucceeded, hex'00', 0.25 ether);
+
+    assertEq(_bootstrapPool.spendablePoolWei(), _poolBefore - 0.25 ether);
+    assertEq(address(_paymaster).balance, _paymasterBefore + 0.25 ether);
+    assertEq(_pool.spendablePoolWei(), 10 ether);
+  }
+
+  function test_ExposedPostOp_WhenMemberPathBillsGlobalPool() external {
+    uint256 _poolBefore = _pool.spendablePoolWei();
+    uint256 _paymasterBefore = address(_paymaster).balance;
+
+    _paymaster.exposedPostOp(IPaymaster.PostOpMode.opSucceeded, hex'01', 0.25 ether);
+
+    assertEq(_pool.spendablePoolWei(), _poolBefore - 0.25 ether);
+    assertEq(address(_paymaster).balance, _paymasterBefore + 0.25 ether);
+    assertEq(_bootstrapPool.spendablePoolWei(), 10 ether);
   }
 
   function _claimUsername() internal {
@@ -88,12 +185,32 @@ contract UnitPactoGlobalPaymaster is Test {
     _nft.claim(_NAME, _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
   }
 
+  function _claimCalldata(
+    string memory name,
+    bytes32 npubHash,
+    bytes memory nostrSignature
+  ) internal pure returns (bytes memory) {
+    return abi.encodeWithSelector(
+      bytes4(0x9824550d),
+      name,
+      npubHash,
+      _PUBKEY,
+      uint256(1),
+      _ISSUED_AT,
+      _SALT,
+      nostrSignature,
+      hex'0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f30313233343536'
+    );
+  }
+
   function _buildUserOp(
     address sender,
     address target,
-    bytes memory innerCallData
+    bytes memory innerCallData,
+    uint256 value
   ) internal pure returns (PackedUserOperation memory userOp) {
-    bytes memory _accountCallData = abi.encodeWithSelector(UserOpCalldataLib.EXECUTE_SELECTOR, target, 0, innerCallData);
+    bytes memory _accountCallData =
+      abi.encodeWithSelector(UserOpCalldataLib.EXECUTE_SELECTOR, target, value, innerCallData);
 
     userOp = PackedUserOperation({
       sender: sender,
