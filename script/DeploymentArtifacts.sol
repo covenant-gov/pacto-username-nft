@@ -9,9 +9,10 @@ import {VmSafe} from 'forge-std/Vm.sol';
 abstract contract DeploymentArtifacts is Script {
   using stdJson for string;
 
-  /// @notice Returns whether deployment JSON should be written (broadcast/resume only — not dry-run simulations)
+  /// @notice Returns whether deployment JSON should be written (dry-run, broadcast, or resume — not forge test)
   function _shouldWriteDeploymentJson() internal view returns (bool) {
-    return vm.isContext(VmSafe.ForgeContext.ScriptBroadcast) || vm.isContext(VmSafe.ForgeContext.ScriptResume);
+    return vm.isContext(VmSafe.ForgeContext.ScriptDryRun) || vm.isContext(VmSafe.ForgeContext.ScriptBroadcast)
+      || vm.isContext(VmSafe.ForgeContext.ScriptResume);
   }
 
   /// @notice Resolves the deployment JSON path for a filename
@@ -60,6 +61,7 @@ abstract contract DeploymentArtifacts is Script {
   /// @param sponsorPolicyRegistry The policy registry address
   /// @param bootstrapClaimPolicy The bootstrap claim policy address
   /// @param pactoGlobalPaymaster The global paymaster address
+  /// @param nostrClaimLink The linked NostrClaimLink library address
   /// @param policyVersion The initial policy version after seeding
   /// @param deployer The deployer address
   function _writeFullSystemJson(
@@ -72,6 +74,7 @@ abstract contract DeploymentArtifacts is Script {
     address sponsorPolicyRegistry,
     address bootstrapClaimPolicy,
     address pactoGlobalPaymaster,
+    address nostrClaimLink,
     uint256 policyVersion,
     address deployer
   ) internal {
@@ -88,9 +91,57 @@ abstract contract DeploymentArtifacts is Script {
     vm.serializeAddress(_key, 'sponsorPolicyRegistry', sponsorPolicyRegistry);
     vm.serializeAddress(_key, 'bootstrapClaimPolicy', bootstrapClaimPolicy);
     vm.serializeAddress(_key, 'pactoGlobalPaymaster', pactoGlobalPaymaster);
+    vm.serializeAddress(_key, 'nostrClaimLink', nostrClaimLink);
     vm.serializeUint(_key, 'policyVersion', policyVersion);
     string memory _json = vm.serializeAddress(_key, 'deployer', deployer);
     _writeDeploymentJson(_json, 'full-system.json');
+  }
+
+  /// @notice Reads NostrClaimLink from forge broadcast libraries after deploy
+  /// @return link The library address or zero when unavailable
+  function _readNostrClaimLinkFromBroadcast() internal view returns (address link) {
+    string memory path =
+      string.concat('broadcast/DeployUsernameSystem.sol/', vm.toString(block.chainid), '/run-latest.json');
+    try vm.readFile(path) returns (string memory raw) {
+      string[] memory libs = raw.readStringArray('.libraries');
+      for (uint256 i; i < libs.length; ++i) {
+        if (_containsSubstring(libs[i], 'NostrClaimLink')) {
+          return vm.parseAddress(_suffixAfterLastColon(libs[i]));
+        }
+      }
+    } catch {}
+  }
+
+  function _containsSubstring(string memory haystack, string memory needle) internal pure returns (bool) {
+    bytes memory h = bytes(haystack);
+    bytes memory n = bytes(needle);
+    if (n.length > h.length) return false;
+    for (uint256 i; i <= h.length - n.length; ++i) {
+      bool matched = true;
+      for (uint256 j; j < n.length; ++j) {
+        if (h[i + j] != n[j]) {
+          matched = false;
+          break;
+        }
+      }
+      if (matched) return true;
+    }
+    return false;
+  }
+
+  function _suffixAfterLastColon(string memory s) internal pure returns (string memory) {
+    bytes memory b = bytes(s);
+    uint256 last = type(uint256).max;
+    for (uint256 i; i < b.length; ++i) {
+      if (b[i] == ':') last = i;
+    }
+    require(last != type(uint256).max && last + 1 < b.length, 'artifacts: bad library entry');
+    uint256 start = last + 1;
+    bytes memory out = new bytes(b.length - start);
+    for (uint256 i; i < out.length; ++i) {
+      out[i] = b[start + i];
+    }
+    return string(out);
   }
 
   /// @notice Thrown when no EIP-7702 allowlist address is configured

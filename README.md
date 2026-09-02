@@ -36,15 +36,18 @@ Configure `.env` and import deployer keys into Foundry keystore (`cast wallet im
 ```bash
 source .env
 
-# Dry-run (does NOT write deployments/*.json)
+# Dry-run (writes deployments/*.json with simulated addresses; does not send txs)
 pnpm simulate-deploy:sepolia
 
-# Broadcast + verify + write deployments/<chainId>/full-system.json
+# Broadcast + write deployments/<chainId>/full-system.json, then verify via VerifyDeploy
 pnpm deploy:sepolia
 pnpm deploy:mainnet
 pnpm deploy:arbitrum
 
-# After deploy: EntryPoint deposit + paymaster stake
+# Re-verify from deployments/<chainId>/full-system.json (includes NostrClaimLink library)
+pnpm verify:sepolia
+
+# After a real deploy: EntryPoint deposit + paymaster stake (needs live full-system.json)
 pnpm fund:paymaster:sepolia
 ```
 
@@ -54,7 +57,7 @@ Fund the global sponsor pool:
 cast send $POOL "deposit()" --value 1ether --rpc-url $SEPOLIA_RPC --private-key $OPS_KEY
 ```
 
-Deployment artifacts are written **only** on `--broadcast` (not simulations).
+`simulate-*` never signs or pays gas. Use `pnpm deploy:sepolia` (with `--broadcast`) to unlock the keystore, deploy on-chain, and produce a fundable artifact. If `FOUNDRY_ETH_KEYSTORE_PASSWORD` is set in your environment, forge skips the interactive password prompt.
 
 ## License
 

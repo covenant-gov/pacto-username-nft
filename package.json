@@ -13,9 +13,9 @@
     "build": "forge build",
     "build:optimized": "FOUNDRY_PROFILE=optimized forge build",
     "coverage": "forge coverage --report summary --report lcov --match-path 'test/{unit,integration}/*' --no-match-coverage 'script/'",
-    "deploy:arbitrum": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url arbitrum --account $ARBITRUM_DEPLOYER_NAME --broadcast --verify --chain arbitrum -vvvvv'",
-    "deploy:mainnet": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url mainnet --account $MAINNET_DEPLOYER_NAME --broadcast --verify --chain mainnet -vvvvv'",
-    "deploy:sepolia": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --verify --chain sepolia -vvvvv'",
+    "deploy:arbitrum": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url arbitrum --account $ARBITRUM_DEPLOYER_NAME --broadcast --chain arbitrum -vvvvv && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url arbitrum --chain arbitrum -vvvv'",
+    "deploy:mainnet": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url mainnet --account $MAINNET_DEPLOYER_NAME --broadcast --chain mainnet -vvvvv && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url mainnet --chain mainnet -vvvv'",
+    "deploy:sepolia": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url sepolia --chain sepolia -vvvv'",
     "fund:paymaster:sepolia": "bash -c 'source .env && forge script FundPaymasterOps --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv'",
     "lint:bulloak": "find test/unit -name '*.tree' | xargs bulloak check",
     "lint:check": "forge fmt --check && pnpm lint:sol",
@@ -30,7 +30,10 @@
     "test:bulloak:scaffold": "bulloak scaffold -wS ./**/*.tree",
     "test:integration": "forge test --match-contract Integration -vvv",
     "test:unit": "forge test --match-contract Unit -vvv",
-    "test:unit:deep": "FOUNDRY_FUZZ_RUNS=5000 pnpm test:unit"
+    "test:unit:deep": "FOUNDRY_FUZZ_RUNS=5000 pnpm test:unit",
+    "verify:arbitrum": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url arbitrum --chain arbitrum -vvvv'",
+    "verify:mainnet": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url mainnet --chain mainnet -vvvv'",
+    "verify:sepolia": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url sepolia --chain sepolia -vvvv'"
   },
   "lint-staged": {
     "*.{js,css,md,ts,sol}": "forge fmt",

@@ -21,7 +21,13 @@ contract FundPaymasterOps is DeploymentArtifacts {
   uint256 internal constant _DEFAULT_UNSTAKE_DELAY_SEC = 172_800;
 
   function run() external {
-    string memory _json = vm.readFile(_deploymentJsonPath('full-system.json'));
+    string memory _path = _deploymentJsonPath('full-system.json');
+    string memory _json;
+    try vm.readFile(_path) returns (string memory raw) {
+      _json = raw;
+    } catch {
+      revert MissingDeploymentArtifact(_path);
+    }
     address _entryPointAddr = _json.readAddress('.entryPoint');
     IUsernameSystemFactory _factory = IUsernameSystemFactory(_json.readAddress('.usernameSystemFactory'));
     PactoGlobalPaymaster _paymaster = PactoGlobalPaymaster(payable(_json.readAddress('.pactoGlobalPaymaster')));
@@ -63,4 +69,7 @@ contract FundPaymasterOps is DeploymentArtifacts {
   function _broadcastDeployer() internal returns (address deployer) {
     (, deployer,) = vm.readCallers();
   }
+
+  /// @notice Thrown when deployments/<chainId>/full-system.json is missing (run pnpm deploy:sepolia first)
+  error MissingDeploymentArtifact(string path);
 }

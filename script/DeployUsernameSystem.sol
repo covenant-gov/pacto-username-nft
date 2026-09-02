@@ -35,7 +35,8 @@ contract DeployUsernameSystem is Script, DeploymentArtifacts {
     }
     vm.stopBroadcast();
 
-    _logDeployment(_config.entryPoint, _allowed7702, _owner);
+    address _nostrClaimLink = _readNostrClaimLinkFromBroadcast();
+    _logDeployment(_config.entryPoint, _allowed7702, _owner, _nostrClaimLink);
     _writeFullSystemJson(
       _config.entryPoint,
       _allowed7702,
@@ -46,6 +47,7 @@ contract DeployUsernameSystem is Script, DeploymentArtifacts {
       _factory.POLICY(),
       _factory.BOOTSTRAP_POLICY(),
       _factory.PAYMASTER(),
+      _nostrClaimLink,
       SponsorPolicyRegistry(_factory.POLICY()).policyVersion(),
       _deployer
     );
@@ -62,7 +64,13 @@ contract DeployUsernameSystem is Script, DeploymentArtifacts {
   /// @param entryPoint The EntryPoint address
   /// @param allowed7702 The allowlisted 7702 implementation
   /// @param owner The protocol owner address
-  function _logDeployment(address entryPoint, address allowed7702, address owner) internal view {
+  /// @param nostrClaimLink The linked NostrClaimLink library
+  function _logDeployment(
+    address entryPoint,
+    address allowed7702,
+    address owner,
+    address nostrClaimLink
+  ) internal view {
     console.log('UsernameSystemFactory:', address(_factory));
     console.log('PactoUsernameNFT:', _factory.USERNAME_NFT());
     console.log('GlobalSponsorPool:', _factory.POOL());
@@ -70,6 +78,7 @@ contract DeployUsernameSystem is Script, DeploymentArtifacts {
     console.log('SponsorPolicyRegistry:', _factory.POLICY());
     console.log('BootstrapClaimPolicy:', _factory.BOOTSTRAP_POLICY());
     console.log('PactoGlobalPaymaster:', _factory.PAYMASTER());
+    console.log('NostrClaimLink:', nostrClaimLink);
     console.log('EntryPoint:', entryPoint);
     console.log('Allowed7702:', allowed7702);
     console.log('Protocol owner:', owner);
