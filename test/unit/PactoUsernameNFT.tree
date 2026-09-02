@@ -1,0 +1,53 @@
+UnitPactoUsernameNFT::claim
+├── when the claim is valid
+│   ├── it stores the username record for the npub
+│   ├── it mints the ERC-721 token to the claimer
+│   └── it emits UsernameClaimed
+├── when the name is too short
+│   └── it reverts
+├── when the name contains uppercase letters
+│   └── it reverts
+├── when the name is already claimed
+│   └── it reverts
+├── when the npub already has a record
+│   └── it reverts
+├── when the claimer address already controls a record
+│   └── it reverts
+├── when the mint fee is not paid
+│   └── it reverts
+└── when the claim signature is invalid
+    └── it reverts
+
+
+UnitPactoUsernameNFT::initiateAddressTransfer
+├── when called by the active controller with a valid pending address
+│   ├── it sets the pending address
+│   └── it emits AddressTransferInitiated
+├── when called by a non-controller
+│   └── it reverts
+└── when a pending transfer already exists
+    └── it reverts
+
+
+UnitPactoUsernameNFT::claimAddressTransfer
+├── when called by the pending recipient
+│   ├── it swaps the active EVM address
+│   ├── it transfers the ERC-721 token to the new controller
+│   └── it emits AddressTransferClaimed
+├── when called by a non-pending address
+│   └── it reverts
+└── when no pending transfer exists
+    └── it reverts
+
+
+UnitPactoUsernameNFT::cancelAddressTransfer
+├── when called by the active controller
+│   ├── it clears the pending address
+│   └── it emits AddressTransferCancelled
+└── when no pending transfer exists
+    └── it reverts
+
+
+UnitPactoUsernameNFT::transfer
+└── when a standard ERC-721 transfer is attempted
+    └── it reverts
