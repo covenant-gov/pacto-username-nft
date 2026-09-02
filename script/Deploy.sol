@@ -1,13 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
-import {Script} from 'forge-std/Script.sol';
+import {DeployUsernameSystem} from 'script/DeployUsernameSystem.sol';
 
-contract Deploy is Script {
-  function run() public {
-    vm.startBroadcast();
-    new PactoUsernameNFT(msg.sender);
-    vm.stopBroadcast();
-  }
-}
+/// @notice Alias entrypoint for username system deployment scripts
+contract Deploy is DeployUsernameSystem {}

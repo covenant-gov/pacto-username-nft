@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IERC165} from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
+import {IERC165} from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
 
 /// @notice Minimal EntryPoint stub for paymaster unit tests
 contract MockEntryPoint is IERC165 {

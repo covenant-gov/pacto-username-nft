@@ -46,7 +46,7 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
     POLICY = address(new SponsorPolicyRegistry(owner));
 
     PAYMASTER = address(
-      new         PactoGlobalPaymaster(
+      new PactoGlobalPaymaster(
         entryPoint,
         PactoUsernameNFT(USERNAME_NFT),
         GlobalSponsorPool(payable(POOL)),

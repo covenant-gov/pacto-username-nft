@@ -2,12 +2,12 @@
 pragma solidity 0.8.30;
 
 import {SIG_VALIDATION_FAILED} from '@account-abstraction/core/Helpers.sol';
+import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 import {UserOpCalldataLib} from 'contracts/utils/UserOpCalldataLib.sol';
-import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {Test} from 'forge-std/Test.sol';
 import {MockEntryPoint} from 'test/mocks/MockEntryPoint.sol';
 import {PactoGlobalPaymasterHarness} from 'test/mocks/PactoGlobalPaymasterHarness.sol';
@@ -35,13 +35,8 @@ contract UnitPactoGlobalPaymaster is Test {
     _nft = new PactoUsernameNFT(_owner);
     _policy = new SponsorPolicyRegistry(_owner);
 
-    _paymaster = new PactoGlobalPaymasterHarness(
-      IEntryPoint(address(_entryPoint)),
-      _nft,
-      _pool,
-      _policy,
-      makeAddr('allowed7702')
-    );
+    _paymaster =
+      new PactoGlobalPaymasterHarness(IEntryPoint(address(_entryPoint)), _nft, _pool, _policy, makeAddr('allowed7702'));
 
     vm.prank(_factory);
     _pool.wirePaymaster(address(_paymaster));

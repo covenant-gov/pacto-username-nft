@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
+import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
 import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
 import {IGlobalSponsorPool} from 'interfaces/IGlobalSponsorPool.sol';
 import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
 import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
-import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
-import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
 
 /// @notice Test harness exposing paymaster validation
 contract PactoGlobalPaymasterHarness is PactoGlobalPaymaster {
