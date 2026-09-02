@@ -1,22 +1,18 @@
 /**
- * Generates golden vectors for NostrClaimLink Solidity tests.
- * Run: node test/fixtures/generate-vectors.mjs
+ * Generates golden vectors for NostrClaimLink struct-hash tests.
+ * Run: npm install && node generate-vectors.mjs
  */
 import { createHash } from 'node:crypto';
-import { finalizeEvent, getPublicKey, generateSecretKey, serializeEvent } from 'nostr-tools';
+import { schnorr } from '@noble/curves/secp256k1';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { keccak256, encodeAbiParameters, parseAbiParameters, toBytes } from 'viem';
+import { generateSecretKey, getPublicKey } from 'nostr-tools';
 
-const KIND = 31337;
-const TAG_D = 'pacto-username-claim-v1';
-
-function claimTagsJson(evmAddress, name, nonce, issuedAt, saltHex) {
-  const evm = evmAddress.toLowerCase();
-  return `[["d","${TAG_D}"],["evm","${evm}"],["name","${name}"],["nonce","${nonce}"],["issued_at","${issuedAt}"],["salt","${saltHex.toLowerCase()}"]]`;
-}
-
-function claimLinkEventId(pubkeyHex, createdAt, evmAddress, name, nonce, issuedAt, saltHex) {
-  const serialized = `[0,"${pubkeyHex}",${createdAt},${KIND},${claimTagsJson(evmAddress, name, nonce, issuedAt, saltHex)},""]`;
-  return createHash('sha256').update(serialized, 'utf8').digest('hex');
-}
+const NOSTR_CLAIM_TYPEHASH = keccak256(
+  toBytes(
+    'PactoNostrClaim(bytes32 pubkey,address evmAddress,bytes32 nameHash,uint256 nonce,uint256 issuedAt,bytes32 salt)',
+  ),
+);
 
 function npubHashFromPubkey(pubkeyHex) {
   const pubkey = Buffer.from(pubkeyHex, 'hex');
@@ -24,56 +20,46 @@ function npubHashFromPubkey(pubkeyHex) {
   return createHash('sha256').update(npubBytes).digest('hex');
 }
 
+function hashNostrClaim(pubkeyHex, evmAddress, name, nonce, issuedAt, saltHex) {
+  const pubkey = `0x${pubkeyHex}`;
+  const salt = saltHex;
+  const nameHash = keccak256(toBytes(name));
+
+  return keccak256(
+    encodeAbiParameters(
+      parseAbiParameters('bytes32, bytes32, address, bytes32, uint256, uint256, bytes32'),
+      [NOSTR_CLAIM_TYPEHASH, pubkey, evmAddress, nameHash, BigInt(nonce), BigInt(issuedAt), salt],
+    ),
+  );
+}
+
 const secretKey = generateSecretKey();
 const pubkeyHex = getPublicKey(secretKey);
-const createdAt = 1_735_689_600;
-const evmAddress = '0xa11ce00000000000000000000000000000000000';
+const evmAddress = '0xA11Ce00000000000000000000000000000000000';
 const name = 'alice';
 const nonce = 1;
-const issuedAt = createdAt;
-const salt = '0x' + '11'.repeat(32);
+const issuedAt = 1_735_689_600;
+const salt = `0x${'11'.repeat(32)}`;
 
-const template = {
-  kind: KIND,
-  created_at: createdAt,
-  tags: [
-    ['d', TAG_D],
-    ['evm', evmAddress.toLowerCase()],
-    ['name', name],
-    ['nonce', String(nonce)],
-    ['issued_at', String(issuedAt)],
-    ['salt', salt.toLowerCase()],
-  ],
-  content: '',
-};
-
-const signed = finalizeEvent(template, secretKey);
-const serialized = serializeEvent(signed);
-const expectedId = claimLinkEventId(pubkeyHex, createdAt, evmAddress, name, nonce, issuedAt, salt);
+const digest = hashNostrClaim(pubkeyHex, evmAddress, name, nonce, issuedAt, salt);
+const digestBytes = hexToBytes(digest.slice(2));
+const signature = schnorr.sign(digestBytes, secretKey);
+const signatureHex = bytesToHex(signature);
 
 console.log(
   JSON.stringify(
     {
       pubkey: `0x${pubkeyHex}`,
-      createdAt,
       evmAddress,
       name,
       nonce,
       issuedAt,
       salt,
       npubHash: `0x${npubHashFromPubkey(pubkeyHex)}`,
-      eventId: signed.id,
-      expectedId,
-      serialized,
-      signature: signed.sig,
-      idMatchesLocalSerializer: signed.id === expectedId,
+      nostrClaimDigest: digest,
+      signature: signatureHex,
     },
     null,
     2,
   ),
 );
-
-if (signed.id !== expectedId) {
-  console.error('Local serializer mismatch — inspect tag ordering or encoding');
-  process.exit(1);
-}
