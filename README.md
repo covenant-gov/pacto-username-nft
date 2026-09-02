@@ -1,176 +1,64 @@
-<img src="https://raw.githubusercontent.com/defi-wonderland/brand/v1.0.0/external/solidity-foundry-boilerplate-banner.png" alt="wonderland banner" align="center" />
-<br />
+# pacto-username-nft
 
-<div align="center"><strong>Start your next Solidity project with Foundry in seconds</strong></div>
-<div align="center">A highly scalable foundation focused on DX and best practices</div>
+Unique lowercase usernames for [Pacto](https://github.com/covenant-gov/pacto-app), keyed by Nostr npub, with **global fallback gas sponsorship** for app on-chain actions.
 
-<br />
+- **Identity:** `PactoUsernameNFT` — one npub → one `UsernameRecord` (name + EVM controller); EIP-712 claim; 2-step address rotation
+- **Sponsorship:** `PactoGlobalPaymaster` + `GlobalSponsorPool` + modular `SponsorPolicyRegistry`
+- **Deploy:** `UsernameSystemFactory` chain singleton
 
-## Features
+Squad-scoped sponsorship remains in [pacto-squad-sponsor](https://github.com/covenant-gov/pacto-squad-sponsor) (preferred when available).
 
-<dl>
-  <dt>Sample contracts</dt>
-  <dd>Basic Greeter contract with an external interface.</dd>
+## Docs
 
-  <dt>Foundry setup</dt>
-  <dd>Foundry configuration with multiple custom profiles and remappings.</dd>
-
-  <dt>Deployment scripts</dt>
-  <dd>Sample scripts to deploy contracts on both mainnet and testnet.</dd>
-
-  <dt>Sample Integration, Unit, Property-based fuzzed and symbolic tests</dt>
-  <dd>Example tests showcasing mocking, assertions and configuration for mainnet forking. As well it includes everything needed in order to check code coverage.</dd>
-  <dd>Unit tests are built based on the <a href="https://twitter.com/PaulRBerg/status/1682346315806539776">Branched-Tree Technique</a>, using <a href="https://github.com/alexfertel/bulloak">Bulloak</a>.
-
-  <dt>Linter</dt>
-  <dd>Simple and fast solidity linting thanks to forge fmt.</dd>
-  <dd>Find missing natspec automatically.</dd>
-
-  <dt>Github workflows CI</dt>
-  <dd>Run all tests and see the coverage as you push your changes.</dd>
-  <dd>Export your Solidity interfaces and contracts as packages, and publish them to NPM.</dd>
-</dl>
+- [TECH_SPEC.md](docs/TECH_SPEC.md) — architecture and locked decisions
+- [DESKTOP_CLIENT_INTEGRATION.md](docs/DESKTOP_CLIENT_INTEGRATION.md) — pacto-app UserOp / badge / path selection
+- [PACTO_APP_FOLLOWUPS.md](docs/PACTO_APP_FOLLOWUPS.md) — upstream integration checklist
 
 ## Setup
 
-1. Install Foundry by following the instructions from [their repository](https://github.com/foundry-rs/foundry#installation).
-2. Copy the `.env.example` file to `.env` and fill in the variables.
-3. Install rust dependencies with [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html):
-   1. `cargo install lintspec`
-   2. `cargo install bulloak`
-4. Install the dependencies by running: `pnpm install`. In case there is an error with the commands, run `foundryup` and try them again.
+1. [Install Foundry](https://book.getfoundry.sh/getting-started/installation)
+2. Copy `.env.example` → `.env`
+3. Optional: `cargo install lintspec bulloak`
+4. `pnpm install`
 
-## Build
-
-The default way to build the code is suboptimal but fast, you can run it via:
+## Build & test
 
 ```bash
 pnpm build
-```
-
-In order to build a more optimized code ([via IR](https://docs.soliditylang.org/en/v0.8.15/ir-breaking-changes.html#solidity-ir-based-codegen-changes)), run:
-
-```bash
-pnpm build:optimized
-```
-
-## Running tests
-
-Unit tests should be isolated from any externalities, while Integration usually run in a fork of the blockchain. In this boilerplate you will find example of both.
-
-In order to run both unit and integration tests, run:
-
-```bash
-pnpm test
-```
-
-In order to just run unit tests, run:
-
-```bash
 pnpm test:unit
-```
-
-In order to run unit tests and run way more fuzzing than usual (5x), run:
-
-```bash
-pnpm test:unit:deep
-```
-
-In order to just run integration tests, run:
-
-```bash
-pnpm test:integration
-```
-
-In order to check your current code coverage, run:
-
-```bash
 pnpm coverage
 ```
 
-In order to create a new `.t.sol` file from a `.tree` bulloak file, run:
+## Deploy
 
-```bash
-pnpm test:bulloak:scaffold
-```
-
-In order to fix or add missing tests to a `.t.sol` file after changing a `.tree` bulloak file, run:
-
-```bash
-pnpm test:bulloak:fix
-```
-
-<br>
-
-## Deploy & verify
-
-### Setup
-
-Configure the `.env` variables and source them:
+Configure `.env` and import deployer keys into Foundry keystore (`cast wallet import …`).
 
 ```bash
 source .env
-```
 
-Import your private keys into Foundry's encrypted keystore:
+# Dry-run (writes deployments/*.json with simulated addresses; does not send txs)
+pnpm simulate-deploy:sepolia
 
-```bash
-cast wallet import $MAINNET_DEPLOYER_NAME --interactive
-```
-
-```bash
-cast wallet import $SEPOLIA_DEPLOYER_NAME --interactive
-```
-
-### Sepolia
-
-```bash
+# Broadcast + write deployments/<chainId>/full-system.json, then verify via VerifyDeploy
 pnpm deploy:sepolia
+pnpm deploy:mainnet
+pnpm deploy:arbitrum
+
+# Re-verify from deployments/<chainId>/full-system.json (includes NostrClaimLink library)
+pnpm verify:sepolia
+
+# After a real deploy: EntryPoint deposit + paymaster stake (needs live full-system.json)
+pnpm fund:paymaster:sepolia
 ```
 
-### Mainnet
+Fund the global sponsor pool:
 
 ```bash
-pnpm deploy:mainnet
+cast send $POOL "deposit()" --value 1ether --rpc-url $SEPOLIA_RPC --private-key $OPS_KEY
 ```
 
-The deployments are stored in ./broadcast
+`simulate-*` never signs or pays gas. Use `pnpm deploy:sepolia` (with `--broadcast`) to unlock the keystore, deploy on-chain, and produce a fundable artifact. If `FOUNDRY_ETH_KEYSTORE_PASSWORD` is set in your environment, forge skips the interactive password prompt.
 
-See the [Foundry Book for available options](https://book.getfoundry.sh/reference/forge/forge-create.html).
+## License
 
-## Export And Publish
-
-Export TypeScript interfaces from Solidity contracts and interfaces providing compatibility with TypeChain. Publish the exported packages to NPM.
-
-To enable this feature, make sure you've set the `NPM_TOKEN` on your org's secrets. Then set the job's conditional to `true`:
-
-```yaml
-jobs:
-  export:
-    name: Generate Interfaces And Contracts
-    # Remove the following line if you wish to export your Solidity contracts and interfaces and publish them to NPM
-    if: true
-    ...
-```
-
-Also, remember to update the `package_name` param to your package name:
-
-```yaml
-- name: Export Solidity - ${{ matrix.export_type }}
-  uses: defi-wonderland/solidity-exporter-action@1dbf5371c260add4a354e7a8d3467e5d3b9580b8
-  with:
-    # Update package_name with your package name
-    package_name: "my-cool-project"
-    ...
-
-
-- name: Publish to NPM - ${{ matrix.export_type }}
-  # Update `my-cool-project` with your package name
-  run: cd export/my-cool-project-${{ matrix.export_type }} && npm publish --access public
-  ...
-```
-
-You can take a look at our [solidity-exporter-action](https://github.com/defi-wonderland/solidity-exporter-action) repository for more information and usage examples.
-
-## Licensing
-The primary license for the boilerplate is MIT, see [`LICENSE`](https://github.com/defi-wonderland/solidity-foundry-boilerplate/blob/main/LICENSE)
+MIT — see [LICENSE](LICENSE)

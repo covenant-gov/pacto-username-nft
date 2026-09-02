@@ -1,0 +1,19 @@
+UnitNostrVerify::hashNostrClaim
+└── when hashing a golden binding tuple
+    └── it matches the client struct hash
+
+
+UnitNostrVerify::npubHashFromPubkey
+└── when hashing a pubkey with the NIP-19 npub prefix byte
+    └── it matches the golden npub hash
+
+
+UnitNostrVerify::verifyNostrClaimSignature
+├── when the signature is valid
+│   └── it verifies successfully
+├── when the signature is invalid
+│   └── it reverts
+├── when the signature length is invalid
+│   └── it reverts
+└── when the name does not match the signed digest
+    └── it reverts
