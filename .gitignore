@@ -21,3 +21,7 @@ broadcast/*/*/*
 # Out dir
 out
 crytic-export
+
+# Fixture generator deps (run `npm install` in test/fixtures to regenerate vectors)
+test/fixtures/node_modules
+test/fixtures/package-lock.json

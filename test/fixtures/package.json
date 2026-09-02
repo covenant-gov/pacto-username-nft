@@ -1,0 +1,6 @@
+{
+  "name": "pacto-username-nft-fixtures",
+  "private": true,
+  "type": "module",
+  "description": "Golden vector generator for Nostr claim link tests. Run: npm install && node generate-vectors.mjs"
+}

@@ -1,0 +1,22 @@
+UnitNostrVerify::claimLinkEventId
+└── when serializing a golden claim link event
+    └── it matches the nostr-tools event id
+
+
+UnitNostrVerify::npubHashFromPubkey
+└── when hashing a pubkey with the NIP-19 npub prefix byte
+    └── it matches the golden npub hash
+
+
+UnitNostrVerify::verifyBinding
+├── when the signature is valid
+│   └── it verifies successfully
+├── when the signature is invalid
+│   └── it reverts
+└── when the signature length is invalid
+    └── it reverts
+
+
+UnitNostrVerify::verify
+└── when the encoded event is valid
+    └── it returns the parsed binding
