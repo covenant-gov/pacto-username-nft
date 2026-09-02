@@ -16,6 +16,10 @@ import {console} from 'forge-std/console.sol';
 contract DeployUsernameSystem is Script, DeploymentArtifacts {
   UsernameSystemFactory internal _factory;
 
+  bytes4 internal constant _INITIATE_ADDRESS_TRANSFER_SELECTOR = 0xa4df29b5;
+  bytes4 internal constant _CLAIM_ADDRESS_TRANSFER_SELECTOR = 0xbf010955;
+  bytes4 internal constant _CANCEL_ADDRESS_TRANSFER_SELECTOR = 0xd88208dc;
+
   function run() external {
     Constants.ChainConfig memory _config = Constants.getConfig(block.chainid);
     address _allowed7702 = _resolveAllowed7702Implementation(_config.allowed7702Implementation);
@@ -27,7 +31,7 @@ contract DeployUsernameSystem is Script, DeploymentArtifacts {
 
     _factory = new UsernameSystemFactory(IEntryPoint(_config.entryPoint), _owner, _allowed7702);
     if (_deployer == _owner) {
-      SponsorPolicyRegistry(_factory.POLICY()).registerTarget(_factory.USERNAME_NFT());
+      _seedMemberPolicySelectors(SponsorPolicyRegistry(_factory.POLICY()), _factory.USERNAME_NFT());
     }
     vm.stopBroadcast();
 
@@ -38,11 +42,20 @@ contract DeployUsernameSystem is Script, DeploymentArtifacts {
       address(_factory),
       _factory.USERNAME_NFT(),
       _factory.POOL(),
+      _factory.BOOTSTRAP_POOL(),
       _factory.POLICY(),
+      _factory.BOOTSTRAP_POLICY(),
       _factory.PAYMASTER(),
       SponsorPolicyRegistry(_factory.POLICY()).policyVersion(),
       _deployer
     );
+  }
+
+  /// @notice Registers member-path username NFT rotation selectors on the default policy registry
+  function _seedMemberPolicySelectors(SponsorPolicyRegistry policy, address usernameNft) internal {
+    policy.registerSelector(usernameNft, _INITIATE_ADDRESS_TRANSFER_SELECTOR);
+    policy.registerSelector(usernameNft, _CLAIM_ADDRESS_TRANSFER_SELECTOR);
+    policy.registerSelector(usernameNft, _CANCEL_ADDRESS_TRANSFER_SELECTOR);
   }
 
   /// @notice Logs deployed contract addresses
@@ -53,7 +66,9 @@ contract DeployUsernameSystem is Script, DeploymentArtifacts {
     console.log('UsernameSystemFactory:', address(_factory));
     console.log('PactoUsernameNFT:', _factory.USERNAME_NFT());
     console.log('GlobalSponsorPool:', _factory.POOL());
+    console.log('BootstrapMintPool:', _factory.BOOTSTRAP_POOL());
     console.log('SponsorPolicyRegistry:', _factory.POLICY());
+    console.log('BootstrapClaimPolicy:', _factory.BOOTSTRAP_POLICY());
     console.log('PactoGlobalPaymaster:', _factory.PAYMASTER());
     console.log('EntryPoint:', entryPoint);
     console.log('Allowed7702:', allowed7702);

@@ -15,8 +15,14 @@ interface IUsernameSystemFactory {
   /// @notice Deployed global sponsor pool
   function POOL() external view returns (address pool);
 
+  /// @notice Deployed bootstrap mint pool
+  function BOOTSTRAP_POOL() external view returns (address bootstrapPool);
+
   /// @notice Deployed sponsor policy registry
   function POLICY() external view returns (address policy);
+
+  /// @notice Deployed bootstrap claim policy
+  function BOOTSTRAP_POLICY() external view returns (address bootstrapPolicy);
 
   /// @notice Deployed global paymaster
   function PAYMASTER() external view returns (address paymaster);

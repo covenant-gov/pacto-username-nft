@@ -56,7 +56,9 @@ abstract contract DeploymentArtifacts is Script {
   /// @param usernameSystemFactory The factory address
   /// @param pactoUsernameNft The username NFT address
   /// @param globalSponsorPool The global sponsor pool address
+  /// @param bootstrapMintPool The bootstrap mint pool address
   /// @param sponsorPolicyRegistry The policy registry address
+  /// @param bootstrapClaimPolicy The bootstrap claim policy address
   /// @param pactoGlobalPaymaster The global paymaster address
   /// @param policyVersion The initial policy version after seeding
   /// @param deployer The deployer address
@@ -66,7 +68,9 @@ abstract contract DeploymentArtifacts is Script {
     address usernameSystemFactory,
     address pactoUsernameNft,
     address globalSponsorPool,
+    address bootstrapMintPool,
     address sponsorPolicyRegistry,
+    address bootstrapClaimPolicy,
     address pactoGlobalPaymaster,
     uint256 policyVersion,
     address deployer
@@ -80,7 +84,9 @@ abstract contract DeploymentArtifacts is Script {
     vm.serializeAddress(_key, 'usernameSystemFactory', usernameSystemFactory);
     vm.serializeAddress(_key, 'pactoUsernameNft', pactoUsernameNft);
     vm.serializeAddress(_key, 'globalSponsorPool', globalSponsorPool);
+    vm.serializeAddress(_key, 'bootstrapMintPool', bootstrapMintPool);
     vm.serializeAddress(_key, 'sponsorPolicyRegistry', sponsorPolicyRegistry);
+    vm.serializeAddress(_key, 'bootstrapClaimPolicy', bootstrapClaimPolicy);
     vm.serializeAddress(_key, 'pactoGlobalPaymaster', pactoGlobalPaymaster);
     vm.serializeUint(_key, 'policyVersion', policyVersion);
     string memory _json = vm.serializeAddress(_key, 'deployer', deployer);

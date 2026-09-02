@@ -28,7 +28,13 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
   address public immutable POOL;
 
   /// @inheritdoc IUsernameSystemFactory
+  address public immutable BOOTSTRAP_POOL;
+
+  /// @inheritdoc IUsernameSystemFactory
   address public immutable POLICY;
+
+  /// @inheritdoc IUsernameSystemFactory
+  address public immutable BOOTSTRAP_POLICY;
 
   /// @inheritdoc IUsernameSystemFactory
   address public immutable PAYMASTER;
@@ -46,24 +52,23 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
     POOL = address(new GlobalSponsorPool(address(this)));
     USERNAME_NFT = address(new PactoUsernameNFT(owner));
     POLICY = address(new SponsorPolicyRegistry(owner));
-
-    address payable _bootstrapPool = payable(address(new BootstrapMintPool(address(this))));
-    address _bootstrapPolicy = address(new BootstrapClaimPolicy(PactoUsernameNFT(USERNAME_NFT)));
+    BOOTSTRAP_POOL = address(new BootstrapMintPool(address(this)));
+    BOOTSTRAP_POLICY = address(new BootstrapClaimPolicy(PactoUsernameNFT(USERNAME_NFT)));
 
     PAYMASTER = address(
       new PactoGlobalPaymaster(
         entryPoint,
         PactoUsernameNFT(USERNAME_NFT),
         GlobalSponsorPool(payable(POOL)),
-        BootstrapMintPool(_bootstrapPool),
+        BootstrapMintPool(payable(BOOTSTRAP_POOL)),
         SponsorPolicyRegistry(POLICY),
-        BootstrapClaimPolicy(_bootstrapPolicy),
+        BootstrapClaimPolicy(BOOTSTRAP_POLICY),
         allowed7702Implementation
       )
     );
 
     GlobalSponsorPool(payable(POOL)).wirePaymaster(PAYMASTER);
-    BootstrapMintPool(_bootstrapPool).wirePaymaster(PAYMASTER);
+    BootstrapMintPool(payable(BOOTSTRAP_POOL)).wirePaymaster(PAYMASTER);
   }
 
   /// @inheritdoc IUsernameSystemFactory

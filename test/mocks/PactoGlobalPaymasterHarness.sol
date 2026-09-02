@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
-import {BasePaymaster} from '@account-abstraction/core/BasePaymaster.sol';
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
 import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
