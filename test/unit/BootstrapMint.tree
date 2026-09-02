@@ -1,0 +1,11 @@
+UnitBootstrapMintPool::deposit
+├── when depositing ETH
+│   ├── it increases spendable pool wei
+│   └── it mints sponsor shares
+
+
+UnitBootstrapMintPool::spendGas
+├── when called by the paymaster
+│   └── it transfers ETH to the paymaster
+└── when called by a non-paymaster
+    └── it reverts
