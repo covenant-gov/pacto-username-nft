@@ -46,6 +46,7 @@
     "sort-package-json": "3.4.0"
   },
   "dependencies": {
+    "@account-abstraction/contracts": "0.7.0",
     "@openzeppelin/contracts": "5.4.0"
   }
 }

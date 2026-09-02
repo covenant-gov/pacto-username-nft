@@ -91,6 +91,12 @@ interface IPactoUsernameNFT {
   /// @return npubHash The npub hash or zero when unmapped
   function npubOf(address _evmAddress) external view returns (bytes32 npubHash);
 
+  /// @notice Returns eligibility data for sponsorship when member is the active controller
+  /// @param member The candidate member address
+  /// @return npubHash The npub hash or zero when not eligible
+  /// @return tokenId The linked token id or zero when not eligible
+  function eligibleMember(address member) external view returns (bytes32 npubHash, uint256 tokenId);
+
   /// @notice Returns whether an npub has a pending address transfer
   /// @param _npubHash The npub hash to lookup
   /// @return pending True when a transfer is in flight

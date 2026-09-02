@@ -1,5 +1,6 @@
 forge-std/=node_modules/forge-std/src
 @openzeppelin/contracts/=node_modules/@openzeppelin/contracts/
+@account-abstraction/=node_modules/@account-abstraction/contracts/
 
 contracts/=src/contracts
 interfaces/=src/interfaces

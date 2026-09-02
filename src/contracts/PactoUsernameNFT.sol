@@ -61,6 +61,17 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
   }
 
   /// @inheritdoc IPactoUsernameNFT
+  function eligibleMember(address member) external view returns (bytes32 npubHash, uint256 tokenId) {
+    npubHash = _addressToNpub[member];
+    if (npubHash == bytes32(0)) return (bytes32(0), 0);
+
+    UsernameRecord memory _record = _records[npubHash];
+    if (_record.evmAddress != member) return (bytes32(0), 0);
+
+    return (npubHash, _record.tokenId);
+  }
+
+  /// @inheritdoc IPactoUsernameNFT
   function isPendingTransfer(bytes32 _npubHash) external view returns (bool pending) {
     return _records[_npubHash].pendingAddress != address(0);
   }

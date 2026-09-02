@@ -1,0 +1,27 @@
+UnitGlobalSponsorPool::deposit
+├── when depositing ETH
+│   ├── it increases spendable pool wei
+│   └── it mints sponsor shares
+
+
+UnitGlobalSponsorPool::spendGas
+├── when called by the paymaster
+│   └── it transfers ETH to the paymaster
+└── when called by a non-paymaster
+    └── it reverts
+
+
+UnitSponsorPolicyRegistry::isSponsorable
+├── when the target is contract-allowed
+│   └── it returns true
+├── when the selector is registered
+│   └── it returns true
+└── when nothing is registered
+    └── it returns false
+
+
+UnitPactoGlobalPaymaster::exposedValidate
+├── when member is eligible and policy allows the call
+│   └── it returns success validation data
+└── when policy denies the call
+    └── it returns failed validation data
