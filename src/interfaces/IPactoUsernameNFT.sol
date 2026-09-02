@@ -48,6 +48,18 @@ interface IPactoUsernameNFT {
   /// @notice Thrown when an EIP-712 claim signature is invalid
   error PactoUsernameNFT_InvalidClaimSignature();
 
+  /// @notice Thrown when npubHash does not match the supplied pubkey
+  error PactoUsernameNFT_InvalidNpubHash();
+
+  /// @notice Thrown when a Nostr claim signature is invalid
+  error PactoUsernameNFT_InvalidNostrSignature();
+
+  /// @notice Thrown when a claim binding is outside the allowed issuedAt window
+  error PactoUsernameNFT_BindingExpired();
+
+  /// @notice Thrown when a claim binding nonce was already consumed
+  error PactoUsernameNFT_NonceAlreadyUsed();
+
   /// @notice Thrown when a caller is not the active EVM controller
   error PactoUsernameNFT_NotActiveController();
 
@@ -86,6 +98,11 @@ interface IPactoUsernameNFT {
   /// @return available True when the name is valid and unclaimed
   function nameAvailable(string calldata _name) external view returns (bool available);
 
+  /// @notice Returns whether a name hash is reserved
+  /// @param nameHash The keccak256 hash of the username bytes
+  /// @return reserved True when the name is reserved
+  function isReservedName(bytes32 nameHash) external view returns (bool reserved);
+
   /// @notice Returns the npub hash for an active EVM controller
   /// @param _evmAddress The EVM address to lookup
   /// @return npubHash The npub hash or zero when unmapped
@@ -107,18 +124,58 @@ interface IPactoUsernameNFT {
   /// @return record The stored username record
   function recordOf(bytes32 _npubHash) external view returns (UsernameRecord memory record);
 
-  /// @notice Claims a username for an npub with dual EVM attestation
-  /// @param _name The lowercase username to claim
-  /// @param _npubHash The hashed npub identity
-  /// @param _nonce Binding nonce for replay protection
-  /// @param _issuedAt Binding issuance timestamp
-  /// @param _signature EIP-712 signature from the claiming EVM address
+  /// @notice Returns the maximum binding age in seconds
+  function MAX_BINDING_AGE() external view returns (uint256 maxBindingAge);
+
+  /// @notice Returns the allowed future clock skew in seconds
+  function CLOCK_SKEW() external view returns (uint256 clockSkew);
+
+  /// @notice Returns the consumed nonce for an npub hash
+  /// @param npubHash The npub hash to lookup
+  /// @return nonce The consumed nonce or zero when none was used
+  function usedNonce(bytes32 npubHash) external view returns (uint256 nonce);
+
+  /// @notice Returns whether an address can bootstrap-claim for an npub hash
+  /// @param member The candidate member address
+  /// @param npubHash The npub hash to claim
+  /// @return canClaim True when bootstrap claim prechecks pass
+  function canBootstrapClaim(address member, bytes32 npubHash) external view returns (bool canClaim);
+
+  /// @notice Computes the EIP-712 digest for a claim binding
+  /// @param npubHash The hashed npub identity
+  /// @param evmAddress The claiming EVM address
+  /// @param name The username being claimed
+  /// @param nonce Binding nonce for replay protection
+  /// @param issuedAt Binding issuance timestamp
+  /// @param salt Binding salt for commit-reveal
+  /// @return digest The typed data digest to sign
+  function hashClaimBinding(
+    bytes32 npubHash,
+    address evmAddress,
+    string calldata name,
+    uint256 nonce,
+    uint256 issuedAt,
+    bytes32 salt
+  ) external view returns (bytes32 digest);
+
+  /// @notice Claims a username for an npub with dual Nostr and EVM attestation
+  /// @param name The lowercase username to claim
+  /// @param npubHash The hashed npub identity
+  /// @param pubkey The 32-byte x-only Nostr public key
+  /// @param nonce Binding nonce for replay protection
+  /// @param issuedAt Binding issuance timestamp
+  /// @param salt Binding salt for commit-reveal
+  /// @param nostrSignature BIP-340 Schnorr signature over the Nostr claim digest
+  /// @param evmSignature EIP-712 signature from the claiming EVM address
   function claim(
-    string calldata _name,
-    bytes32 _npubHash,
-    uint256 _nonce,
-    uint256 _issuedAt,
-    bytes calldata _signature
+    string calldata name,
+    bytes32 npubHash,
+    bytes32 pubkey,
+    uint256 nonce,
+    uint256 issuedAt,
+    bytes32 salt,
+    bytes calldata nostrSignature,
+    bytes calldata evmSignature
   ) external payable;
 
   /// @notice Initiates a two-step transfer of the active EVM controller

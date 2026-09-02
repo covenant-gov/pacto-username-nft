@@ -5,6 +5,7 @@ import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import {EIP712} from '@openzeppelin/contracts/utils/cryptography/EIP712.sol';
+import {NostrClaimLink} from 'contracts/utils/NostrClaimLink.sol';
 import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
 
 /// @title PactoUsernameNFT
@@ -18,12 +19,22 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
   /// @inheritdoc IPactoUsernameNFT
   uint256 public constant MAX_NAME_LENGTH = 32;
 
+  /// @inheritdoc IPactoUsernameNFT
+  uint256 public constant MAX_BINDING_AGE = 7 days;
+
+  /// @inheritdoc IPactoUsernameNFT
+  uint256 public constant CLOCK_SKEW = 5 minutes;
+
   /// @notice EIP-712 type hash for username claim bindings
-  bytes32 public constant CLAIM_BINDING_TYPEHASH =
-    keccak256('ClaimBinding(bytes32 npubHash,address evmAddress,string name,uint256 nonce,uint256 issuedAt)');
+  bytes32 public constant CLAIM_BINDING_TYPEHASH = keccak256(
+    'ClaimBinding(bytes32 npubHash,address evmAddress,string name,uint256 nonce,uint256 issuedAt,bytes32 salt)'
+  );
 
   /// @inheritdoc IPactoUsernameNFT
   uint256 public mintFee;
+
+  /// @notice Consumed claim nonce per npub hash
+  mapping(bytes32 npubHash => uint256 nonce) public usedNonce;
 
   /// @notice Primary npub hash to username record mapping
   mapping(bytes32 npubHash => UsernameRecord record) internal _records;
@@ -48,7 +59,7 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
 
   /// @notice Initializes the username NFT collection
   /// @param _owner The protocol owner for admin functions
-  constructor(address _owner) ERC721('Pacto Username', 'PACTO-NAME') EIP712('PactoUsername', '1') Ownable(_owner) {}
+  constructor(address _owner) ERC721('Pacto Username', 'PACTO-NAME') EIP712('PactoUsername', '2') Ownable(_owner) {}
 
   /// @inheritdoc IPactoUsernameNFT
   function nameAvailable(string calldata _name) external view returns (bool available) {
@@ -82,6 +93,14 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     if (record.tokenId == 0) revert PactoUsernameNFT_RecordNotFound();
   }
 
+  /// @inheritdoc IPactoUsernameNFT
+  function canBootstrapClaim(address member, bytes32 npubHash) external view returns (bool canClaim) {
+    if (member == address(0) || npubHash == bytes32(0)) return false;
+    if (_addressToNpub[member] != bytes32(0)) return false;
+    if (_records[npubHash].tokenId != 0) return false;
+    return true;
+  }
+
   /// @notice Returns whether a name hash is reserved
   /// @param _nameHash The keccak256 hash of the username bytes
   /// @return reserved True when the name is reserved
@@ -89,44 +108,41 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     return _reservedNames[_nameHash];
   }
 
-  /// @notice Computes the EIP-712 digest for a claim binding
-  /// @param _npubHash The hashed npub identity
-  /// @param _evmAddress The claiming EVM address
-  /// @param _name The username being claimed
-  /// @param _nonce Binding nonce for replay protection
-  /// @param _issuedAt Binding issuance timestamp
-  /// @return digest The typed data digest to sign
+  /// @inheritdoc IPactoUsernameNFT
   function hashClaimBinding(
     bytes32 _npubHash,
     address _evmAddress,
     string calldata _name,
     uint256 _nonce,
-    uint256 _issuedAt
+    uint256 _issuedAt,
+    bytes32 _salt
   ) external view returns (bytes32 digest) {
-    digest = _hashClaimBinding(_npubHash, _evmAddress, _name, _nonce, _issuedAt);
+    digest = _hashClaimBinding(_npubHash, _evmAddress, _name, _nonce, _issuedAt, _salt);
   }
 
   /// @inheritdoc IPactoUsernameNFT
   function claim(
     string calldata _name,
     bytes32 _npubHash,
+    bytes32 _pubkey,
     uint256 _nonce,
     uint256 _issuedAt,
-    bytes calldata _signature
+    bytes32 _salt,
+    bytes calldata _nostrSignature,
+    bytes calldata _evmSignature
   ) external payable {
     if (msg.value < mintFee) revert PactoUsernameNFT_InsufficientMintFee();
-    if (_npubHash == bytes32(0)) revert PactoUsernameNFT_InvalidName();
-    if (!_isValidName(_name)) revert PactoUsernameNFT_InvalidName();
-    if (_nameToNpub[_name] != bytes32(0) || _reservedNames[keccak256(bytes(_name))]) {
-      revert PactoUsernameNFT_NameUnavailable();
-    }
-    if (_records[_npubHash].tokenId != 0) revert PactoUsernameNFT_NpubAlreadyClaimed();
-    if (_addressToNpub[msg.sender] != bytes32(0)) revert PactoUsernameNFT_AddressAlreadyClaimed();
+    _validateClaimInputs(_name, _npubHash, _pubkey, _nonce, _issuedAt);
 
-    bytes32 _digest = _hashClaimBinding(_npubHash, msg.sender, _name, _nonce, _issuedAt);
-    if (_signature.length != 65) revert PactoUsernameNFT_InvalidClaimSignature();
-    address _signer = _digest.recover(_signature);
-    if (_signer != msg.sender) revert PactoUsernameNFT_InvalidClaimSignature();
+    if (
+      !NostrClaimLink.isNostrClaimSignatureValid(
+        _pubkey, msg.sender, _name, _nonce, _issuedAt, _salt, _nostrSignature
+      )
+    ) revert PactoUsernameNFT_InvalidNostrSignature();
+
+    _verifyEvmClaimSignature(_npubHash, _name, _nonce, _issuedAt, _salt, _evmSignature);
+
+    usedNonce[_npubHash] = _nonce;
 
     uint256 _tokenId = _nextTokenId++;
     _records[_npubHash] =
@@ -202,6 +218,43 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     _reservedNames[_nameHash] = _reserved;
   }
 
+  /// @notice Validates claim availability, binding freshness, and npub binding
+  function _validateClaimInputs(
+    string calldata _name,
+    bytes32 _npubHash,
+    bytes32 _pubkey,
+    uint256 _nonce,
+    uint256 _issuedAt
+  ) internal view {
+    if (_npubHash == bytes32(0) || _pubkey == bytes32(0)) revert PactoUsernameNFT_InvalidName();
+    if (!_isValidName(_name)) revert PactoUsernameNFT_InvalidName();
+    if (_nameToNpub[_name] != bytes32(0) || _reservedNames[keccak256(bytes(_name))]) {
+      revert PactoUsernameNFT_NameUnavailable();
+    }
+    if (_records[_npubHash].tokenId != 0) revert PactoUsernameNFT_NpubAlreadyClaimed();
+    if (_addressToNpub[msg.sender] != bytes32(0)) revert PactoUsernameNFT_AddressAlreadyClaimed();
+    if (_npubHash != NostrClaimLink.npubHashFromPubkey(_pubkey)) revert PactoUsernameNFT_InvalidNpubHash();
+    if (_issuedAt > block.timestamp + CLOCK_SKEW || block.timestamp > _issuedAt + MAX_BINDING_AGE) {
+      revert PactoUsernameNFT_BindingExpired();
+    }
+    if (_nonce <= usedNonce[_npubHash]) revert PactoUsernameNFT_NonceAlreadyUsed();
+  }
+
+  /// @notice Verifies the EIP-712 claim binding signature from the caller
+  function _verifyEvmClaimSignature(
+    bytes32 _npubHash,
+    string calldata _name,
+    uint256 _nonce,
+    uint256 _issuedAt,
+    bytes32 _salt,
+    bytes calldata _evmSignature
+  ) internal view {
+    bytes32 _digest = _hashClaimBinding(_npubHash, msg.sender, _name, _nonce, _issuedAt, _salt);
+    if (_evmSignature.length != 65) revert PactoUsernameNFT_InvalidClaimSignature();
+    address _signer = _digest.recover(_evmSignature);
+    if (_signer != msg.sender) revert PactoUsernameNFT_InvalidClaimSignature();
+  }
+
   /// @notice Validates a lowercase alphabetic username
   /// @param _name The candidate username
   /// @return valid True when the name satisfies length and charset rules
@@ -224,16 +277,20 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
   /// @param _name The username being claimed
   /// @param _nonce Binding nonce for replay protection
   /// @param _issuedAt Binding issuance timestamp
+  /// @param _salt Binding salt for commit-reveal
   /// @return digest The typed data digest to sign
   function _hashClaimBinding(
     bytes32 _npubHash,
     address _evmAddress,
     string memory _name,
     uint256 _nonce,
-    uint256 _issuedAt
+    uint256 _issuedAt,
+    bytes32 _salt
   ) internal view returns (bytes32 digest) {
     bytes32 _structHash = keccak256(
-      abi.encode(CLAIM_BINDING_TYPEHASH, _npubHash, _evmAddress, keccak256(bytes(_name)), _nonce, _issuedAt)
+      abi.encode(
+        CLAIM_BINDING_TYPEHASH, _npubHash, _evmAddress, keccak256(bytes(_name)), _nonce, _issuedAt, _salt
+      )
     );
     digest = _hashTypedDataV4(_structHash);
   }

@@ -19,8 +19,14 @@ contract UnitPactoGlobalPaymaster is Test {
   address internal _factory = makeAddr('factory');
   address internal _claimer;
   address internal _target = makeAddr('target');
-  bytes32 internal constant _NPUB_HASH = keccak256('npub1example');
+  bytes32 internal constant _PUBKEY = 0x391823cee659f38512ccde6c2bb6f4e32e917478ee2e96d4f5e05656e7adb2ae;
+  bytes32 internal constant _NPUB_HASH = 0x540d126644e922328318f1870ba0c9de3b2d5c0c271e27af7efea3e44025fdc1;
+  bytes32 internal constant _SALT = 0x1111111111111111111111111111111111111111111111111111111111111111;
+  uint256 internal constant _ISSUED_AT = 1_735_689_600;
   string internal constant _NAME = 'daopunk';
+
+  bytes internal constant _NOSTR_SIGNATURE =
+    hex'715358459e600817a7e0fb4371b594a9e36f8c4f0272a41e4248fc3b1021accf6cdf2d2718424a5491d94ae1935fbb1b569c3e92b23269143e71e3635be3efb2';
 
   MockEntryPoint internal _entryPoint;
   PactoUsernameNFT internal _nft;
@@ -30,6 +36,8 @@ contract UnitPactoGlobalPaymaster is Test {
 
   function setUp() external {
     _claimer = vm.addr(_CLAIMER_PK);
+    vm.warp(_ISSUED_AT);
+
     _entryPoint = new MockEntryPoint();
     _pool = new GlobalSponsorPool(_factory);
     _nft = new PactoUsernameNFT(_owner);
@@ -72,12 +80,12 @@ contract UnitPactoGlobalPaymaster is Test {
   }
 
   function _claimUsername() internal {
-    bytes32 _digest = _nft.hashClaimBinding(_NPUB_HASH, _claimer, _NAME, 1, block.timestamp);
+    bytes32 _digest = _nft.hashClaimBinding(_NPUB_HASH, _claimer, _NAME, 1, _ISSUED_AT, _SALT);
     (uint8 _v, bytes32 _r, bytes32 _s) = vm.sign(_CLAIMER_PK, _digest);
-    bytes memory _signature = abi.encodePacked(_r, _s, _v);
+    bytes memory _evmSignature = abi.encodePacked(_r, _s, _v);
 
     vm.prank(_claimer);
-    _nft.claim(_NAME, _NPUB_HASH, 1, block.timestamp, _signature);
+    _nft.claim(_NAME, _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
   }
 
   function _buildUserOp(

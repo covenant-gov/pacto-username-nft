@@ -1,11 +1,12 @@
 /**
- * Generates golden vectors for NostrClaimLink struct-hash tests.
+ * Generates golden vectors aligned with PactoUsernameNFT unit test keys.
  * Run: npm install && node generate-vectors.mjs
  */
 import { createHash } from 'node:crypto';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { keccak256, encodeAbiParameters, parseAbiParameters, toBytes } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import { generateSecretKey, getPublicKey } from 'nostr-tools';
 
 const NOSTR_CLAIM_TYPEHASH = keccak256(
@@ -13,6 +14,8 @@ const NOSTR_CLAIM_TYPEHASH = keccak256(
     'PactoNostrClaim(bytes32 pubkey,address evmAddress,bytes32 nameHash,uint256 nonce,uint256 issuedAt,bytes32 salt)',
   ),
 );
+
+const CLAIMER_PK = `0x${'0'.repeat(59)}a11ce`;
 
 function npubHashFromPubkey(pubkeyHex) {
   const pubkey = Buffer.from(pubkeyHex, 'hex');
@@ -35,8 +38,8 @@ function hashNostrClaim(pubkeyHex, evmAddress, name, nonce, issuedAt, saltHex) {
 
 const secretKey = generateSecretKey();
 const pubkeyHex = getPublicKey(secretKey);
-const evmAddress = '0xA11Ce00000000000000000000000000000000000';
-const name = 'alice';
+const evmAddress = privateKeyToAccount(CLAIMER_PK).address;
+const name = 'daopunk';
 const nonce = 1;
 const issuedAt = 1_735_689_600;
 const salt = `0x${'11'.repeat(32)}`;
@@ -49,6 +52,7 @@ const signatureHex = bytesToHex(signature);
 console.log(
   JSON.stringify(
     {
+      claimerPrivateKey: CLAIMER_PK,
       pubkey: `0x${pubkeyHex}`,
       evmAddress,
       name,
@@ -57,7 +61,7 @@ console.log(
       salt,
       npubHash: `0x${npubHashFromPubkey(pubkeyHex)}`,
       nostrClaimDigest: digest,
-      signature: signatureHex,
+      nostrSignature: signatureHex,
     },
     null,
     2,

@@ -68,7 +68,23 @@ library NostrClaimLink {
     bytes32 salt,
     bytes calldata signature
   ) public view {
-    if (signature.length != 64) revert NostrClaimLink_InvalidSignatureLength();
+    if (!isNostrClaimSignatureValid(pubkey, evmAddress, name, nonce, issuedAt, salt, signature)) {
+      if (signature.length != 64) revert NostrClaimLink_InvalidSignatureLength();
+      revert NostrClaimLink_InvalidSignature();
+    }
+  }
+
+  /// @notice Returns whether a Nostr BIP-340 signature is valid for a username claim binding
+  function isNostrClaimSignatureValid(
+    bytes32 pubkey,
+    address evmAddress,
+    string calldata name,
+    uint256 nonce,
+    uint256 issuedAt,
+    bytes32 salt,
+    bytes calldata signature
+  ) public view returns (bool valid) {
+    if (signature.length != 64) return false;
 
     bytes32 _digest = hashNostrClaim(pubkey, evmAddress, name, nonce, issuedAt, salt);
 
@@ -79,6 +95,6 @@ library NostrClaimLink {
       _s := calldataload(add(signature.offset, 32))
     }
 
-    if (!Bip340.verify(pubkey, _rx, _s, _digest)) revert NostrClaimLink_InvalidSignature();
+    return Bip340.verify(pubkey, _rx, _s, _digest);
   }
 }

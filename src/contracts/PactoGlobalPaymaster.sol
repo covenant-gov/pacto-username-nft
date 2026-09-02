@@ -97,7 +97,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
       return ('', SIG_VALIDATION_FAILED);
     }
 
-    (address _target, bytes calldata _innerCallData, bool _validCall) = UserOpCalldataLib.decodeExecute(userOp.callData);
+    (address _target, , bytes calldata _innerCallData, bool _validCall) = UserOpCalldataLib.decodeExecute(userOp.callData);
     if (!_validCall) revert GlobalPaymaster_InvalidCallData();
 
     ISponsorPolicy _policy = _data.policy == address(0) ? _DEFAULT_POLICY : ISponsorPolicy(_data.policy);

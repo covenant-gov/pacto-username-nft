@@ -15,7 +15,15 @@ UnitPactoUsernameNFT::claim
 │   └── it reverts
 ├── when the mint fee is not paid
 │   └── it reverts
-└── when the claim signature is invalid
+├── when the claim signature is invalid
+│   └── it reverts
+├── when the nostr signature is invalid
+│   └── it reverts
+├── when the npub hash does not match the pubkey
+│   └── it reverts
+├── when the nonce is reused
+│   └── it reverts
+└── when the binding is expired
     └── it reverts
 
 
