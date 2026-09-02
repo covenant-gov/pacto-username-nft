@@ -17,8 +17,7 @@ contract UnitNostrVerify is Test {
     hex'4d5923622ae38f1fc18ce25d2d11a843f18a660c2651c0cdfa344ccd08fe93ab4f88f2cdd8bcc10d489bdfcbc57a9d1211611f81f438a391abc89a0a6cba4c09';
 
   function test_HashNostrClaim_MatchesGoldenVector() external pure {
-    bytes32 _digest =
-      NostrClaimLink.hashNostrClaim(_PUBKEY, _EVM_ADDRESS, _NAME, _NONCE, _ISSUED_AT, _SALT);
+    bytes32 _digest = NostrClaimLink.hashNostrClaim(_PUBKEY, _EVM_ADDRESS, _NAME, _NONCE, _ISSUED_AT, _SALT);
 
     assertEq(_digest, _NOSTR_CLAIM_DIGEST);
   }
@@ -28,9 +27,7 @@ contract UnitNostrVerify is Test {
   }
 
   function test_VerifyNostrClaimSignature_WhenSignatureIsValid() external view {
-    NostrClaimLink.verifyNostrClaimSignature(
-      _PUBKEY, _EVM_ADDRESS, _NAME, _NONCE, _ISSUED_AT, _SALT, _SIGNATURE
-    );
+    NostrClaimLink.verifyNostrClaimSignature(_PUBKEY, _EVM_ADDRESS, _NAME, _NONCE, _ISSUED_AT, _SALT, _SIGNATURE);
   }
 
   function test_VerifyNostrClaimSignature_WhenSignatureIsInvalid() external {
@@ -48,14 +45,10 @@ contract UnitNostrVerify is Test {
 
   function test_VerifyNostrClaimSignature_WhenNameDoesNotMatchDigest() external {
     vm.expectRevert(NostrClaimLink.NostrClaimLink_InvalidSignature.selector);
-    NostrClaimLink.verifyNostrClaimSignature(
-      _PUBKEY, _EVM_ADDRESS, 'bob', _NONCE, _ISSUED_AT, _SALT, _SIGNATURE
-    );
+    NostrClaimLink.verifyNostrClaimSignature(_PUBKEY, _EVM_ADDRESS, 'bob', _NONCE, _ISSUED_AT, _SALT, _SIGNATURE);
   }
 
   function _verifyHelper(bytes memory signature) external view {
-    NostrClaimLink.verifyNostrClaimSignature(
-      _PUBKEY, _EVM_ADDRESS, _NAME, _NONCE, _ISSUED_AT, _SALT, signature
-    );
+    NostrClaimLink.verifyNostrClaimSignature(_PUBKEY, _EVM_ADDRESS, _NAME, _NONCE, _ISSUED_AT, _SALT, signature);
   }
 }

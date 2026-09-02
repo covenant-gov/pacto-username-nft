@@ -52,11 +52,11 @@ contract UnitBootstrapClaimPolicy is Test {
     );
   }
 
-  function _executeCalldata(address target, uint256 value, bytes memory innerCallData)
-    internal
-    pure
-    returns (bytes memory)
-  {
+  function _executeCalldata(
+    address target,
+    uint256 value,
+    bytes memory innerCallData
+  ) internal pure returns (bytes memory) {
     return abi.encodeWithSelector(UserOpCalldataLib.EXECUTE_SELECTOR, target, value, innerCallData);
   }
 
@@ -128,8 +128,7 @@ contract UnitBootstrapClaimPolicy is Test {
   function test_IsSponsorable_WhenNameIsUnavailable() external {
     _claimUsername();
 
-    bytes memory _innerCallData =
-      _claimCalldata(_NAME, keccak256('npub1other'), _NOSTR_SIGNATURE);
+    bytes memory _innerCallData = _claimCalldata(_NAME, keccak256('npub1other'), _NOSTR_SIGNATURE);
 
     assertFalse(_policy.isSponsorable(address(_nft), _innerCallData, _other, 0));
   }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
+import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
 import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
 import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
@@ -36,11 +36,7 @@ contract PactoGlobalPaymasterHarness is PactoGlobalPaymaster {
   }
 
   /// @notice Exposes internal postOp billing for unit tests
-  function exposedPostOp(
-    IPaymaster.PostOpMode mode,
-    bytes calldata context,
-    uint256 actualGasCost
-  ) external {
+  function exposedPostOp(IPaymaster.PostOpMode mode, bytes calldata context, uint256 actualGasCost) external {
     _postOp(mode, context, actualGasCost, 0);
   }
 }

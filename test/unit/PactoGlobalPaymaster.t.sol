@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {SIG_VALIDATION_FAILED} from '@account-abstraction/core/Helpers.sol';
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
+import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
 import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
-import {IPactoGlobalPaymaster} from 'interfaces/IPactoGlobalPaymaster.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 import {UserOpCalldataLib} from 'contracts/utils/UserOpCalldataLib.sol';
 import {Test} from 'forge-std/Test.sol';
+import {IPactoGlobalPaymaster} from 'interfaces/IPactoGlobalPaymaster.sol';
 import {MockEntryPoint} from 'test/mocks/MockEntryPoint.sol';
 import {PactoGlobalPaymasterHarness} from 'test/mocks/PactoGlobalPaymasterHarness.sol';
 
@@ -52,13 +52,7 @@ contract UnitPactoGlobalPaymaster is Test {
     _bootstrapPolicy = new BootstrapClaimPolicy(_nft);
 
     _paymaster = new PactoGlobalPaymasterHarness(
-      IEntryPoint(address(_entryPoint)),
-      _nft,
-      _pool,
-      _bootstrapPool,
-      _policy,
-      _bootstrapPolicy,
-      makeAddr('allowed7702')
+      IEntryPoint(address(_entryPoint)), _nft, _pool, _bootstrapPool, _policy, _bootstrapPolicy, makeAddr('allowed7702')
     );
 
     vm.startPrank(_factory);

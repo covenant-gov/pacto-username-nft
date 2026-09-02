@@ -45,9 +45,7 @@ library NostrClaimLink {
     bytes32 salt
   ) public pure returns (bytes32 digest) {
     digest = keccak256(
-      abi.encode(
-        NOSTR_CLAIM_TYPEHASH, pubkey, evmAddress, keccak256(bytes(name)), nonce, issuedAt, salt
-      )
+      abi.encode(NOSTR_CLAIM_TYPEHASH, pubkey, evmAddress, keccak256(bytes(name)), nonce, issuedAt, salt)
     );
   }
 

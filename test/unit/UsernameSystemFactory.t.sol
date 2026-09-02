@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
-import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {UsernameSystemFactory} from 'contracts/UsernameSystemFactory.sol';
 import {Test} from 'forge-std/Test.sol';
 import {MockEntryPoint} from 'test/mocks/MockEntryPoint.sol';

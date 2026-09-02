@@ -189,8 +189,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     if (callData.length < 4) return (bytes32(0), false);
     if (bytes4(callData[:4]) != _CLAIM_SELECTOR) return (bytes32(0), false);
 
-    (, npubHash,,,,,,) =
-      abi.decode(callData[4:], (string, bytes32, bytes32, uint256, uint256, bytes32, bytes, bytes));
+    (, npubHash,,,,,,) = abi.decode(callData[4:], (string, bytes32, bytes32, uint256, uint256, bytes32, bytes, bytes));
 
     valid = true;
   }

@@ -134,11 +134,9 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     if (msg.value < mintFee) revert PactoUsernameNFT_InsufficientMintFee();
     _validateClaimInputs(_name, _npubHash, _pubkey, _nonce, _issuedAt);
 
-    if (
-      !NostrClaimLink.isNostrClaimSignatureValid(
+    if (!NostrClaimLink.isNostrClaimSignatureValid(
         _pubkey, msg.sender, _name, _nonce, _issuedAt, _salt, _nostrSignature
-      )
-    ) revert PactoUsernameNFT_InvalidNostrSignature();
+      )) revert PactoUsernameNFT_InvalidNostrSignature();
 
     _verifyEvmClaimSignature(_npubHash, _name, _nonce, _issuedAt, _salt, _evmSignature);
 
@@ -288,9 +286,7 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     bytes32 _salt
   ) internal view returns (bytes32 digest) {
     bytes32 _structHash = keccak256(
-      abi.encode(
-        CLAIM_BINDING_TYPEHASH, _npubHash, _evmAddress, keccak256(bytes(_name)), _nonce, _issuedAt, _salt
-      )
+      abi.encode(CLAIM_BINDING_TYPEHASH, _npubHash, _evmAddress, keccak256(bytes(_name)), _nonce, _issuedAt, _salt)
     );
     digest = _hashTypedDataV4(_structHash);
   }

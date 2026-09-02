@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {SIG_VALIDATION_FAILED} from '@account-abstraction/core/Helpers.sol';
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
+import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
@@ -92,8 +92,6 @@ contract IntegrationSponsoredBootstrapClaim is IntegrationBase {
 
   function test_SponsoredMemberAction_WhenClaimSelectorIsNotRegisteredOnMemberPolicy() external view {
     bytes memory _claimInner = claimCalldata(USERNAME, NPUB_HASH, NOSTR_SIGNATURE);
-    assertFalse(
-      SponsorPolicyRegistry(address(policy)).isSponsorable(address(nft), _claimInner, claimer, 1)
-    );
+    assertFalse(SponsorPolicyRegistry(address(policy)).isSponsorable(address(nft), _claimInner, claimer, 1));
   }
 }

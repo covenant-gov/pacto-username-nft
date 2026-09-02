@@ -57,13 +57,7 @@ contract IntegrationBase is Test {
     bootstrapPolicy = new BootstrapClaimPolicy(nft);
 
     paymaster = new PactoGlobalPaymasterHarness(
-      IEntryPoint(address(entryPoint)),
-      nft,
-      pool,
-      bootstrapPool,
-      policy,
-      bootstrapPolicy,
-      makeAddr('allowed7702')
+      IEntryPoint(address(entryPoint)), nft, pool, bootstrapPool, policy, bootstrapPolicy, makeAddr('allowed7702')
     );
 
     vm.startPrank(factoryAddr);
@@ -93,11 +87,11 @@ contract IntegrationBase is Test {
     signature = abi.encodePacked(_r, _s, _v);
   }
 
-  function claimCalldata(string memory name, bytes32 npubHash, bytes memory nostrSignature)
-    internal
-    view
-    returns (bytes memory)
-  {
+  function claimCalldata(
+    string memory name,
+    bytes32 npubHash,
+    bytes memory nostrSignature
+  ) internal view returns (bytes memory) {
     return abi.encodeWithSelector(
       bytes4(0x9824550d),
       name,
@@ -140,11 +134,11 @@ contract IntegrationBase is Test {
     });
   }
 
-  function buildPaymasterData(bytes32 npubHash, address member, address policyAddr)
-    internal
-    view
-    returns (bytes memory)
-  {
+  function buildPaymasterData(
+    bytes32 npubHash,
+    address member,
+    address policyAddr
+  ) internal view returns (bytes memory) {
     return abi.encodePacked(
       bytes20(bytes20(address(paymaster))),
       bytes16(uint128(150_000)),

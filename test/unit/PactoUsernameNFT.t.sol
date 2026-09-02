@@ -2,8 +2,8 @@
 pragma solidity 0.8.30;
 
 import {IPactoUsernameNFT, PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
-import {Test} from 'forge-std/Test.sol';
 import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
+import {Test} from 'forge-std/Test.sol';
 
 contract UnitPactoUsernameNFT is Test {
   using stdStorage for StdStorage;
@@ -70,9 +70,7 @@ contract UnitPactoUsernameNFT is Test {
     uint256 _value
   ) internal {
     vm.prank(_caller);
-    _nft.claim{value: _value}(
-      _name, _npubHash, _pubkey, _nonce, _issuedAt, _salt, _nostrSignature, _evmSignature
-    );
+    _nft.claim{value: _value}(_name, _npubHash, _pubkey, _nonce, _issuedAt, _salt, _nostrSignature, _evmSignature);
   }
 
   function _defaultClaim(
@@ -161,9 +159,7 @@ contract UnitPactoUsernameNFT is Test {
 
     vm.expectRevert(IPactoUsernameNFT.PactoUsernameNFT_AddressAlreadyClaimed.selector);
     vm.prank(_claimer);
-    _nft.claim(
-      'othername', _OTHER_NPUB_HASH, _PUBKEY, 2, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature
-    );
+    _nft.claim('othername', _OTHER_NPUB_HASH, _PUBKEY, 2, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
   }
 
   function test_Claim_WhenTheMintFeeIsNotPaid() external {
@@ -190,9 +186,7 @@ contract UnitPactoUsernameNFT is Test {
 
     vm.expectRevert(IPactoUsernameNFT.PactoUsernameNFT_InvalidNostrSignature.selector);
     vm.prank(_claimer);
-    _nft.claim(
-      _NAME, _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _badNostrSignature, _evmSignature
-    );
+    _nft.claim(_NAME, _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _badNostrSignature, _evmSignature);
   }
 
   function test_Claim_WhenTheNpubHashDoesNotMatchThePubkey() external {
@@ -200,9 +194,7 @@ contract UnitPactoUsernameNFT is Test {
 
     vm.expectRevert(IPactoUsernameNFT.PactoUsernameNFT_InvalidNpubHash.selector);
     vm.prank(_claimer);
-    _nft.claim(
-      _NAME, _OTHER_NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature
-    );
+    _nft.claim(_NAME, _OTHER_NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
   }
 
   function test_Claim_WhenTheNonceIsReused() external {

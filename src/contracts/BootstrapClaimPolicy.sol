@@ -31,15 +31,8 @@ contract BootstrapClaimPolicy is ISponsorPolicy {
     if (callData.length < 4) return false;
     if (bytes4(callData[:4]) != CLAIM_SELECTOR) return false;
 
-    (
-      string memory _name,
-      bytes32 _npubHash,
-      ,
-      ,
-      ,
-      ,
-      bytes memory _nostrSignature,
-    ) = abi.decode(callData[4:], (string, bytes32, bytes32, uint256, uint256, bytes32, bytes, bytes));
+    (string memory _name, bytes32 _npubHash,,,,, bytes memory _nostrSignature,) =
+      abi.decode(callData[4:], (string, bytes32, bytes32, uint256, uint256, bytes32, bytes, bytes));
 
     if (!USERNAME_NFT.canBootstrapClaim(member, _npubHash)) return false;
     if (!USERNAME_NFT.nameAvailable(_name)) return false;
