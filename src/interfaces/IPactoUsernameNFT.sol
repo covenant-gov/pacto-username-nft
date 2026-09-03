@@ -4,14 +4,14 @@ pragma solidity 0.8.30;
 /// @notice On-chain username credential keyed by Nostr npub hash
 interface IPactoUsernameNFT {
   /// @notice Username record for a single npub identity
+  /// @param name Claimed username (immutable after claim; any string, unique on this contract)
+  /// @param evmAddress Active EVM controller eligible for sponsorship
+  /// @param pendingAddress Pending recipient during two-step address transfer (zero if none)
+  /// @param tokenId Linked ERC-721 token id
   struct UsernameRecord {
-    /// @notice Claimed username (immutable after claim; any string, unique on this contract)
     string name;
-    /// @notice Active EVM controller eligible for sponsorship
     address evmAddress;
-    /// @notice Pending recipient during two-step address transfer (zero if none)
     address pendingAddress;
-    /// @notice Linked ERC-721 token id
     uint256 tokenId;
   }
 

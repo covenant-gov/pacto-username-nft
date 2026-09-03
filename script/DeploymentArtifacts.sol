@@ -51,7 +51,20 @@ abstract contract DeploymentArtifacts is Script {
     vm.writeJson(json, _deploymentJsonPath(filename));
   }
 
-  /// @notice Full-system deployment artifact fields
+  /// @notice Addresses and metadata written to full-system.json
+  /// @param entryPoint The ERC-4337 EntryPoint
+  /// @param allowed7702Implementation The allowlisted EIP-7702 account implementation
+  /// @param protocolRegistry The protocol address book
+  /// @param usernameSystemFactory The username system factory
+  /// @param pactoUsernameNft The username NFT
+  /// @param globalSponsorPool The global sponsor pool
+  /// @param bootstrapMintPool The bootstrap mint pool
+  /// @param sponsorPolicyRegistry The member-path sponsor policy registry
+  /// @param bootstrapClaimPolicy The bootstrap claim policy
+  /// @param pactoGlobalPaymaster The global paymaster
+  /// @param nostrClaimLink The linked NostrClaimLink library
+  /// @param policyVersion The initial sponsor policy version
+  /// @param deployer The forge script broadcaster
   struct FullSystemArtifact {
     address entryPoint;
     address allowed7702Implementation;

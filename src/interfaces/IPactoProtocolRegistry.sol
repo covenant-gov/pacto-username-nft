@@ -4,6 +4,14 @@ pragma solidity 0.8.30;
 /// @notice Mutable protocol address book for alpha upgradeability
 interface IPactoProtocolRegistry {
   /// @notice Protocol address-book slots that can be updated via set
+  /// @param UsernameNft Username NFT used for membership and claims
+  /// @param Paymaster Global ERC-4337 paymaster
+  /// @param Pool Member-path sponsor pool
+  /// @param BootstrapPool Bootstrap-claim sponsor pool
+  /// @param Policy Member-path sponsor policy registry
+  /// @param BootstrapPolicy Bootstrap-claim sponsor policy
+  /// @param EntryPoint ERC-4337 EntryPoint v0.7
+  /// @param Allowed7702Implementation Allowlisted EIP-7702 account implementation
   enum ProtocolComponent {
     UsernameNft,
     Paymaster,
@@ -16,22 +24,22 @@ interface IPactoProtocolRegistry {
   }
 
   /// @notice Live protocol contract addresses
+  /// @param usernameNft Username NFT used for membership and claims
+  /// @param paymaster Global ERC-4337 paymaster
+  /// @param pool Member-path sponsor pool
+  /// @param bootstrapPool Bootstrap-claim sponsor pool
+  /// @param policy Member-path sponsor policy registry
+  /// @param bootstrapPolicy Bootstrap-claim sponsor policy
+  /// @param entryPoint ERC-4337 EntryPoint v0.7
+  /// @param allowed7702Implementation Allowlisted EIP-7702 account implementation (zero allowed)
   struct ProtocolAddresses {
-    /// @notice Username NFT used for membership and claims
     address usernameNft;
-    /// @notice Global ERC-4337 paymaster
     address paymaster;
-    /// @notice Member-path sponsor pool
     address pool;
-    /// @notice Bootstrap-claim sponsor pool
     address bootstrapPool;
-    /// @notice Member-path sponsor policy registry
     address policy;
-    /// @notice Bootstrap-claim sponsor policy
     address bootstrapPolicy;
-    /// @notice ERC-4337 EntryPoint v0.7
     address entryPoint;
-    /// @notice Allowlisted EIP-7702 account implementation (zero allowed)
     address allowed7702Implementation;
   }
 

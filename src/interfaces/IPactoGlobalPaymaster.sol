@@ -15,6 +15,9 @@ interface IPactoGlobalPaymaster {
   function ALLOWED_7702_IMPLEMENTATION() external view returns (address implementation);
 
   /// @notice Parsed global paymaster payload
+  /// @param npubHash Bound npub hash for the sponsored member
+  /// @param member Username NFT holder address expected to match the UserOp sender
+  /// @param policy Optional custom policy address (member path; zero uses default)
   struct PaymasterData {
     bytes32 npubHash;
     address member;

@@ -25,6 +25,19 @@ contract VerifyDeploy is Script {
   string internal constant _PAYMASTER = 'src/contracts/PactoGlobalPaymaster.sol:PactoGlobalPaymaster';
   string internal constant _NOSTR_CLAIM_LINK = 'src/contracts/utils/NostrClaimLink.sol:NostrClaimLink';
 
+  /// @notice Loaded full-system deployment addresses for verification
+  /// @param entryPoint The ERC-4337 EntryPoint
+  /// @param allowed7702 The allowlisted EIP-7702 account implementation
+  /// @param registry The protocol address book
+  /// @param factory The username system factory
+  /// @param nft The username NFT
+  /// @param pool The global sponsor pool
+  /// @param bootstrapPool The bootstrap mint pool
+  /// @param policy The member-path sponsor policy registry
+  /// @param bootstrapPolicy The bootstrap claim policy
+  /// @param paymaster The global paymaster
+  /// @param owner The protocol owner
+  /// @param nostrClaimLink The linked NostrClaimLink library
   struct Deployed {
     address entryPoint;
     address allowed7702;

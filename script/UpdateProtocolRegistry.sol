@@ -19,6 +19,15 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
   bytes4 internal constant _CANCEL_ADDRESS_TRANSFER_SELECTOR = 0xd88208dc;
 
   /// @notice Optional registry slot updates from env / artifacts
+  /// @param usernameNft Replacement username NFT address (zero skips)
+  /// @param paymaster Replacement paymaster address (zero skips)
+  /// @param pool Replacement global sponsor pool address (zero skips)
+  /// @param bootstrapPool Replacement bootstrap mint pool address (zero skips)
+  /// @param policy Replacement member policy registry address (zero skips)
+  /// @param bootstrapPolicy Replacement bootstrap claim policy address (zero skips)
+  /// @param entryPoint Replacement EntryPoint address (zero skips)
+  /// @param allowed7702 Replacement EIP-7702 allowlist address when has7702Env
+  /// @param has7702Env Whether an EIP-7702 allowlist update was supplied
   struct RegistryUpdates {
     address usernameNft;
     address paymaster;
