@@ -5,6 +5,7 @@ import {UserOpCalldataLib} from 'contracts/utils/UserOpCalldataLib.sol';
 import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
 import {IGlobalSponsorPool} from 'interfaces/IGlobalSponsorPool.sol';
 import {IPactoGlobalPaymaster} from 'interfaces/IPactoGlobalPaymaster.sol';
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
 import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 
@@ -41,54 +42,19 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
   bytes1 internal constant _MEMBER_CONTEXT = 0x01;
 
   /// @inheritdoc IPactoGlobalPaymaster
-  address public immutable ALLOWED_7702_IMPLEMENTATION;
-
-  /// @notice Username NFT used for eligibility checks
-  IPactoUsernameNFT internal immutable _USERNAME_NFT;
-
-  /// @notice Global sponsor pool billed on successful member UserOps
-  IGlobalSponsorPool internal immutable _POOL;
-
-  /// @notice Bootstrap mint pool billed on successful bootstrap claim UserOps
-  IBootstrapMintPool internal immutable _BOOTSTRAP_POOL;
-
-  /// @notice Default policy registry for member actions
-  ISponsorPolicy internal immutable _DEFAULT_POLICY;
-
-  /// @notice Fixed policy for bootstrap claim sponsorship
-  ISponsorPolicy internal immutable _BOOTSTRAP_POLICY;
+  IPactoProtocolRegistry public immutable REGISTRY;
 
   /// @notice Initializes the global paymaster
   /// @param entryPoint The ERC-4337 EntryPoint v0.7
-  /// @param usernameNft The username NFT contract
-  /// @param pool The global sponsor pool
-  /// @param bootstrapPool The bootstrap mint pool
-  /// @param defaultPolicy The default sponsor policy registry
-  /// @param bootstrapPolicy The fixed bootstrap claim policy
-  /// @param allowed7702Implementation The allowlisted EIP-7702 account implementation
-  constructor(
-    IEntryPoint entryPoint,
-    IPactoUsernameNFT usernameNft,
-    IGlobalSponsorPool pool,
-    IBootstrapMintPool bootstrapPool,
-    ISponsorPolicy defaultPolicy,
-    ISponsorPolicy bootstrapPolicy,
-    address allowed7702Implementation
-  ) BasePaymaster(entryPoint) {
-    if (
-      usernameNft == IPactoUsernameNFT(address(0)) || pool == IGlobalSponsorPool(address(0))
-        || bootstrapPool == IBootstrapMintPool(address(0))
-    ) revert GlobalPaymaster_ZeroAddress();
-    if (defaultPolicy == ISponsorPolicy(address(0)) || bootstrapPolicy == ISponsorPolicy(address(0))) {
-      revert GlobalPaymaster_ZeroAddress();
-    }
+  /// @param registry The protocol registry
+  constructor(IEntryPoint entryPoint, IPactoProtocolRegistry registry) BasePaymaster(entryPoint) {
+    if (registry == IPactoProtocolRegistry(address(0))) revert GlobalPaymaster_ZeroAddress();
+    REGISTRY = registry;
+  }
 
-    _USERNAME_NFT = usernameNft;
-    _POOL = pool;
-    _BOOTSTRAP_POOL = bootstrapPool;
-    _DEFAULT_POLICY = defaultPolicy;
-    _BOOTSTRAP_POLICY = bootstrapPolicy;
-    ALLOWED_7702_IMPLEMENTATION = allowed7702Implementation;
+  /// @inheritdoc IPactoGlobalPaymaster
+  function ALLOWED_7702_IMPLEMENTATION() public view returns (address implementation) {
+    implementation = REGISTRY.allowed7702Implementation();
   }
 
   /// @notice Accepts ETH refunded from sponsor pools after spendGas
@@ -99,12 +65,12 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     if (mode != PostOpMode.opSucceeded || context.length == 0) return;
 
     if (context[0] == _BOOTSTRAP_CONTEXT) {
-      _BOOTSTRAP_POOL.spendGas(actualGasCost);
+      IBootstrapMintPool(payable(REGISTRY.bootstrapPool())).spendGas(actualGasCost);
       return;
     }
 
     if (context[0] == _MEMBER_CONTEXT) {
-      _POOL.spendGas(actualGasCost);
+      IGlobalSponsorPool(payable(REGISTRY.pool())).spendGas(actualGasCost);
     }
   }
 
@@ -124,7 +90,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
       UserOpCalldataLib.decodeExecute(userOp.callData);
     if (!_validCall) revert GlobalPaymaster_InvalidCallData();
 
-    if (_USERNAME_NFT.npubOf(_data.member) == bytes32(0)) {
+    if (IPactoUsernameNFT(REGISTRY.usernameNft()).npubOf(_data.member) == bytes32(0)) {
       return _validateBootstrapPath(_data, _target, _value, _innerCallData, maxCost);
     }
 
@@ -140,7 +106,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     uint256 maxCost
   ) internal view returns (bytes memory context, uint256 validationData) {
     uint256 _requiredBalance = (maxCost * _BALANCE_HEADROOM_BPS) / 10_000;
-    if (_BOOTSTRAP_POOL.spendablePoolWei() < _requiredBalance) {
+    if (IBootstrapMintPool(payable(REGISTRY.bootstrapPool())).spendablePoolWei() < _requiredBalance) {
       return ('', SIG_VALIDATION_FAILED);
     }
 
@@ -149,7 +115,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     (bytes32 _claimNpubHash, bool _validClaim) = _decodeClaimNpubHash(innerCallData);
     if (!_validClaim || _claimNpubHash != data.npubHash) return ('', SIG_VALIDATION_FAILED);
 
-    if (!_BOOTSTRAP_POLICY.isSponsorable(target, innerCallData, data.member, 0)) {
+    if (!ISponsorPolicy(REGISTRY.bootstrapPolicy()).isSponsorable(target, innerCallData, data.member, 0)) {
       return ('', SIG_VALIDATION_FAILED);
     }
 
@@ -167,16 +133,16 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     if (data.policy != address(0)) revert GlobalPaymaster_CustomPolicyNotAllowed();
 
     uint256 _requiredBalance = (maxCost * _BALANCE_HEADROOM_BPS) / 10_000;
-    if (_POOL.spendablePoolWei() < _requiredBalance) {
+    if (IGlobalSponsorPool(payable(REGISTRY.pool())).spendablePoolWei() < _requiredBalance) {
       return ('', SIG_VALIDATION_FAILED);
     }
 
-    (bytes32 _npubHash, uint256 _tokenId) = _USERNAME_NFT.eligibleMember(data.member);
+    (bytes32 _npubHash, uint256 _tokenId) = IPactoUsernameNFT(REGISTRY.usernameNft()).eligibleMember(data.member);
     if (_npubHash == bytes32(0) || _npubHash != data.npubHash) {
       return ('', SIG_VALIDATION_FAILED);
     }
 
-    if (!_DEFAULT_POLICY.isSponsorable(target, innerCallData, data.member, _tokenId)) {
+    if (!ISponsorPolicy(REGISTRY.policy()).isSponsorable(target, innerCallData, data.member, _tokenId)) {
       return ('', SIG_VALIDATION_FAILED);
     }
 
@@ -210,7 +176,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     if (_isEip7702Delegation(_code)) {
       if (sender != member) revert GlobalPaymaster_InvalidMemberBinding(sender, member);
       address _impl = _eip7702Implementation(_code);
-      if (_impl != ALLOWED_7702_IMPLEMENTATION) revert GlobalPaymaster_Invalid7702Implementation(_impl);
+      if (_impl != ALLOWED_7702_IMPLEMENTATION()) revert GlobalPaymaster_Invalid7702Implementation(_impl);
       return true;
     }
 

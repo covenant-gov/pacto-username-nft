@@ -7,7 +7,7 @@ Tracking items for [pacto-app](https://github.com/covenant-gov/pacto-app). Contr
 ## Address book & bindings
 
 - [ ] Add `globalUsernameSponsor` section to `src/lib/evm/pacto-protocol-addresses.json` from `deployments/<chainId>/full-system.json`
-- [ ] Include `bootstrapMintPool` and `bootstrapClaimPolicy` (new in v2 deploy JSON)
+- [ ] Include `protocolRegistry`, `bootstrapMintPool` and `bootstrapClaimPolicy` (new in v2 deploy JSON)
 - [ ] Document in `docs/wallet/PROTOCOL_ADDRESS_BOOK.md`
 - [ ] Generate Alloy bindings for `PactoUsernameNFT`, `PactoGlobalPaymaster`, `GlobalSponsorPool`, `BootstrapMintPool`, `SponsorPolicyRegistry`
 - [ ] Pin Sepolia addresses after first broadcast deploy
@@ -30,7 +30,8 @@ Tracking items for [pacto-app](https://github.com/covenant-gov/pacto-app). Contr
 
 ## Username claim & identity
 
-- [ ] Profile UI: claim username flow (availability check, lowercase validation)
+- [ ] Profile UI: claim username flow (`nameAvailable`; no charset enforcement — match NIP-01 kind 0 `name`)
+- [ ] Prefer `PactoProtocolRegistry.usernameNft()` for the live NFT address during alpha
 - [ ] Shared `hashNostrClaim(pubkey, evmAddress, name, nonce, issuedAt, salt)` encoder — match `NostrClaimLink.sol`
 - [ ] Golden vectors: port `test/fixtures/claim-link.golden.json` + `generate-vectors.mjs` for client CI
 - [ ] EIP-712 `ClaimBinding` v2 signing (domain version **`2`**, includes `salt`)

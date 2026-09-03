@@ -6,15 +6,16 @@ import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOpe
 import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
+import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 import {UserOpCalldataLib} from 'contracts/utils/UserOpCalldataLib.sol';
-import {Test} from 'forge-std/Test.sol';
+import {ProtocolRegistryTestBase} from 'test/helpers/ProtocolRegistryTestBase.sol';
 import {MockEntryPoint} from 'test/mocks/MockEntryPoint.sol';
 import {PactoGlobalPaymasterHarness} from 'test/mocks/PactoGlobalPaymasterHarness.sol';
 
 /// @notice Shared full-system wiring for integration tests
-contract IntegrationBase is Test {
+contract IntegrationBase is ProtocolRegistryTestBase {
   uint256 internal constant CLAIMER_PK = 0xA11CE;
   uint256 internal constant PENDING_PK = 0xC0FFEE;
 
@@ -32,11 +33,12 @@ contract IntegrationBase is Test {
   bytes4 internal constant CANCEL_ADDRESS_TRANSFER_SELECTOR = 0xd88208dc;
 
   address internal owner = makeAddr('owner');
-  address internal factoryAddr = makeAddr('factory');
   address internal claimer;
   address internal pending;
+  address internal allowed7702 = makeAddr('allowed7702');
 
   MockEntryPoint internal entryPoint;
+  PactoProtocolRegistry internal registry;
   PactoUsernameNFT internal nft;
   GlobalSponsorPool internal pool;
   BootstrapMintPool internal bootstrapPool;
@@ -50,20 +52,26 @@ contract IntegrationBase is Test {
     vm.warp(ISSUED_AT);
 
     entryPoint = new MockEntryPoint();
-    pool = new GlobalSponsorPool(factoryAddr);
-    bootstrapPool = new BootstrapMintPool(factoryAddr);
+    registry = new PactoProtocolRegistry(owner, address(this));
+    pool = new GlobalSponsorPool(registry);
+    bootstrapPool = new BootstrapMintPool(registry);
     nft = new PactoUsernameNFT(owner);
     policy = new SponsorPolicyRegistry(owner);
-    bootstrapPolicy = new BootstrapClaimPolicy(nft);
+    bootstrapPolicy = new BootstrapClaimPolicy(registry);
 
-    paymaster = new PactoGlobalPaymasterHarness(
-      IEntryPoint(address(entryPoint)), nft, pool, bootstrapPool, policy, bootstrapPolicy, makeAddr('allowed7702')
+    paymaster = new PactoGlobalPaymasterHarness(IEntryPoint(address(entryPoint)), registry);
+
+    _initializeRegistry(
+      registry,
+      address(nft),
+      address(paymaster),
+      address(pool),
+      address(bootstrapPool),
+      address(policy),
+      address(bootstrapPolicy),
+      address(entryPoint),
+      allowed7702
     );
-
-    vm.startPrank(factoryAddr);
-    pool.wirePaymaster(address(paymaster));
-    bootstrapPool.wirePaymaster(address(paymaster));
-    vm.stopPrank();
 
     vm.startPrank(owner);
     policy.registerSelector(address(nft), INITIATE_ADDRESS_TRANSFER_SELECTOR);

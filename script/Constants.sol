@@ -4,6 +4,9 @@ pragma solidity 0.8.30;
 /// @notice Public chain constants for username system deployment.
 library Constants {
   /// @notice Chain-level deployment configuration
+  /// @param chainId The target chain id
+  /// @param entryPoint The ERC-4337 EntryPoint for this chain
+  /// @param allowed7702Implementation The allowlisted EIP-7702 account implementation
   struct ChainConfig {
     uint256 chainId;
     address entryPoint;

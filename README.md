@@ -1,8 +1,9 @@
 # pacto-username-nft
 
-Unique lowercase usernames for [Pacto](https://github.com/covenant-gov/pacto-app), keyed by Nostr npub, with **global fallback gas sponsorship** for app on-chain actions.
+Unique usernames for [Pacto](https://github.com/covenant-gov/pacto-app), keyed by Nostr npub, with **global fallback gas sponsorship** for app on-chain actions.
 
 - **Identity:** `PactoUsernameNFT` — one npub → one `UsernameRecord` (name + EVM controller); EIP-712 claim; 2-step address rotation
+- **Registry:** `PactoProtocolRegistry` — mutable alpha address book for NFT / paymaster / pools / policies
 - **Sponsorship:** `PactoGlobalPaymaster` + `GlobalSponsorPool` + modular `SponsorPolicyRegistry`
 - **Deploy:** `UsernameSystemFactory` chain singleton
 
@@ -49,6 +50,10 @@ pnpm verify:sepolia
 
 # After a real deploy: EntryPoint deposit + paymaster stake (needs live full-system.json)
 pnpm fund:paymaster:sepolia
+
+# Alpha: deploy a replacement NFT, then point the protocol registry at it
+pnpm deploy:nft:sepolia
+pnpm update:registry:sepolia
 ```
 
 Fund the global sponsor pool:

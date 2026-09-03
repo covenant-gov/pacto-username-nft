@@ -2,20 +2,32 @@
 pragma solidity 0.8.30;
 
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
-import {Test} from 'forge-std/Test.sol';
+import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {ISponsorCommon} from 'interfaces/ISponsorCommon.sol';
+import {ProtocolRegistryTestBase} from 'test/helpers/ProtocolRegistryTestBase.sol';
 
-contract UnitBootstrapMintPool is Test {
-  address internal _factory = makeAddr('factory');
+contract UnitBootstrapMintPool is ProtocolRegistryTestBase {
+  address internal _owner = makeAddr('owner');
   address internal _paymaster = makeAddr('paymaster');
   address internal _depositor = makeAddr('depositor');
 
+  PactoProtocolRegistry internal _registry;
   BootstrapMintPool internal _pool;
 
   function setUp() external {
-    _pool = new BootstrapMintPool(_factory);
-    vm.prank(_factory);
-    _pool.wirePaymaster(_paymaster);
+    _registry = new PactoProtocolRegistry(_owner, address(this));
+    _pool = new BootstrapMintPool(_registry);
+    _initializeRegistry(
+      _registry,
+      makeAddr('nft'),
+      _paymaster,
+      makeAddr('pool'),
+      address(_pool),
+      makeAddr('policy'),
+      makeAddr('bootstrapPolicy'),
+      makeAddr('entryPoint'),
+      address(0)
+    );
   }
 
   function test_Deposit_WhenDepositingEth() external {

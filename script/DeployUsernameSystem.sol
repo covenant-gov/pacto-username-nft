@@ -9,11 +9,10 @@ import {DeploymentArtifacts} from 'script/DeploymentArtifacts.sol';
 
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 
-import {Script} from 'forge-std/Script.sol';
 import {console} from 'forge-std/console.sol';
 
 /// @notice Deploys the username NFT and global sponsorship system on a supported chain
-contract DeployUsernameSystem is Script, DeploymentArtifacts {
+contract DeployUsernameSystem is DeploymentArtifacts {
   UsernameSystemFactory internal _factory;
 
   bytes4 internal constant _INITIATE_ADDRESS_TRANSFER_SELECTOR = 0xa4df29b5;
@@ -37,20 +36,22 @@ contract DeployUsernameSystem is Script, DeploymentArtifacts {
 
     address _nostrClaimLink = _readNostrClaimLinkFromBroadcast();
     _logDeployment(_config.entryPoint, _allowed7702, _owner, _nostrClaimLink);
-    _writeFullSystemJson(
-      _config.entryPoint,
-      _allowed7702,
-      address(_factory),
-      _factory.USERNAME_NFT(),
-      _factory.POOL(),
-      _factory.BOOTSTRAP_POOL(),
-      _factory.POLICY(),
-      _factory.BOOTSTRAP_POLICY(),
-      _factory.PAYMASTER(),
-      _nostrClaimLink,
-      SponsorPolicyRegistry(_factory.POLICY()).policyVersion(),
-      _deployer
-    );
+
+    FullSystemArtifact memory _artifact;
+    _artifact.entryPoint = _config.entryPoint;
+    _artifact.allowed7702Implementation = _allowed7702;
+    _artifact.protocolRegistry = address(_factory.REGISTRY());
+    _artifact.usernameSystemFactory = address(_factory);
+    _artifact.pactoUsernameNft = _factory.USERNAME_NFT();
+    _artifact.globalSponsorPool = _factory.POOL();
+    _artifact.bootstrapMintPool = _factory.BOOTSTRAP_POOL();
+    _artifact.sponsorPolicyRegistry = _factory.POLICY();
+    _artifact.bootstrapClaimPolicy = _factory.BOOTSTRAP_POLICY();
+    _artifact.pactoGlobalPaymaster = _factory.PAYMASTER();
+    _artifact.nostrClaimLink = _nostrClaimLink;
+    _artifact.policyVersion = SponsorPolicyRegistry(_factory.POLICY()).policyVersion();
+    _artifact.deployer = _deployer;
+    _writeFullSystemJson(_artifact);
   }
 
   /// @notice Registers member-path username NFT rotation selectors on the default policy registry
@@ -72,6 +73,7 @@ contract DeployUsernameSystem is Script, DeploymentArtifacts {
     address nostrClaimLink
   ) internal view {
     console.log('UsernameSystemFactory:', address(_factory));
+    console.log('PactoProtocolRegistry:', address(_factory.REGISTRY()));
     console.log('PactoUsernameNFT:', _factory.USERNAME_NFT());
     console.log('GlobalSponsorPool:', _factory.POOL());
     console.log('BootstrapMintPool:', _factory.BOOTSTRAP_POOL());

@@ -11,7 +11,7 @@
 
 ## 1. Purpose
 
-Pacto users claim a **unique lowercase username** tied to their **Nostr npub** and **EVM address**. That credential unlocks:
+Pacto users claim a **unique username** tied to their **Nostr npub** and **EVM address**. That credential unlocks:
 
 1. **Verified identity** — checkmark in the app when Nostr + on-chain record align.
 2. **Global gas sponsorship** — fallback paymaster for Pacto app on-chain actions when squad sponsorship is unavailable.
@@ -31,6 +31,7 @@ flowchart TB
   end
 
   subgraph sponsor [Global sponsorship layer]
+    Registry[PactoProtocolRegistry]
     Factory[UsernameSystemFactory]
     Pool[GlobalSponsorPool]
     BootstrapPool[BootstrapMintPool]
@@ -48,10 +49,15 @@ flowchart TB
   App --> NFT
   App --> Paymaster
   App --> SquadPM
+  App --> Registry
 
   NFT --> Record
-  Paymaster -->|"member: eligibleMember + policy"| NFT
-  Paymaster -->|"bootstrap: canBootstrapClaim"| BootstrapPolicy
+  Factory --> Registry
+  Paymaster -->|"member: eligibleMember + policy"| Registry
+  Paymaster -->|"bootstrap: canBootstrapClaim"| Registry
+  BootstrapPolicy --> Registry
+  Pool --> Registry
+  BootstrapPool --> Registry
   Paymaster --> Policy
   Paymaster --> Pool
   Paymaster --> BootstrapPool
@@ -73,13 +79,14 @@ Order: **EOA ETH** → **squad sponsor** → **global member** (post-mint). **Bo
 
 | Contract | Role |
 |----------|------|
+| `PactoProtocolRegistry` | Mutable alpha address book; owner updates NFT/paymaster/pools/policies |
 | `PactoUsernameNFT` | ERC-721 username + npub-keyed `UsernameRecord`; dual-sig claim; 2-step EVM rotation |
-| `GlobalSponsorPool` | Protocol-wide ETH vault for member actions; pro-rata shares; `spendGas` only from paymaster |
+| `GlobalSponsorPool` | Protocol-wide ETH vault for member actions; pro-rata shares; `spendGas` only from registry paymaster |
 | `BootstrapMintPool` | Separate ETH vault for one-time bootstrap `claim()` gas |
 | `SponsorPolicyRegistry` | Deny-by-default allowlist for **member** sponsorship (rotation selectors + app targets) |
 | `BootstrapClaimPolicy` | Fixed policy: `claim()` only, pre-claim checks, `execute` value == 0 |
 | `PactoGlobalPaymaster` | ERC-4337 EntryPoint v0.7; dual-path validation; routes billing to correct pool |
-| `UsernameSystemFactory` | Chain singleton; deploys and wires all of the above |
+| `UsernameSystemFactory` | Chain singleton; deploys and initializes the registry + system |
 | `NostrClaimLink` | Compact `PactoNostrClaim` struct hash + BIP-340 verify (~15–25k gas) |
 | `Bip340` | On-chain Schnorr verifier for Nostr signatures |
 
@@ -91,7 +98,7 @@ One **npub hash → one record**:
 
 ```solidity
 struct UsernameRecord {
-  string name;            // immutable after claim; lowercase [a-z], 3–32 chars
+  string name;            // immutable after claim; any string (NIP-01 kind 0 style); unique on this NFT
   address evmAddress;     // active controller; eligible for sponsorship
   address pendingAddress; // non-zero during 2-step transfer
   uint256 tokenId;        // linked ERC-721
@@ -231,11 +238,12 @@ PostOp context: `0x00` → bootstrap pool, `0x01` → global pool.
 | D4 | Permissions ≠ gas (unchanged from squad sponsor) |
 | D5 | EntryPoint v0.7 + Pimlico bundler + PactoSimple7702Account (shared with squad sponsor) |
 | D6 | Deployment JSON written **only** on `--broadcast` / resume, not dry-run simulations |
-| D7 | Name charset: `[a-z]` only; length 3–32 |
+| D7 | Name: any string (aligned with NIP-01 kind 0 `name`); uniqueness + reserved names only on this NFT |
 | D8 | `mintFee` configurable; default `0` |
 | D9 | On-chain Nostr verify uses compact struct hash, not NIP-01 JSON |
 | D10 | Member path rejects custom `policy` addresses (closes pool-drain vector) |
 | D11 | EIP-7702 activation gas is ops/client concern, out of bootstrap pool scope |
+| D12 | Alpha: live contracts resolve addresses from `PactoProtocolRegistry` (mutable); lock down post-alpha |
 
 ---
 
@@ -250,6 +258,7 @@ See [README](../README.md). Artifacts: `deployments/<chainId>/full-system.json` 
   "chainId": 11155111,
   "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
   "allowed7702Implementation": "0x…",
+  "protocolRegistry": "0x…",
   "usernameSystemFactory": "0x…",
   "pactoUsernameNft": "0x…",
   "globalSponsorPool": "0x…",
@@ -268,6 +277,12 @@ Post-deploy ops (Sepolia example):
 pnpm fund:paymaster:sepolia   # EP deposit + FCFS stake
 ```
 
+Alpha NFT upgrade (no claim migration):
+
+```bash
+pnpm deploy:nft:sepolia        # writes deployments/<chainId>/username-nft.json
+pnpm update:registry:sepolia   # points registry at new NFT; reseeds rotation selectors when owner==deployer
+```
 Fund pools separately:
 
 ```bash

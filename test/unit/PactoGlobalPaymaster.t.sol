@@ -8,21 +8,22 @@ import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOpe
 import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
+import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 import {UserOpCalldataLib} from 'contracts/utils/UserOpCalldataLib.sol';
-import {Test} from 'forge-std/Test.sol';
 import {IPactoGlobalPaymaster} from 'interfaces/IPactoGlobalPaymaster.sol';
+import {ProtocolRegistryTestBase} from 'test/helpers/ProtocolRegistryTestBase.sol';
 import {MockEntryPoint} from 'test/mocks/MockEntryPoint.sol';
 import {PactoGlobalPaymasterHarness} from 'test/mocks/PactoGlobalPaymasterHarness.sol';
 
-contract UnitPactoGlobalPaymaster is Test {
+contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
   uint256 internal constant _CLAIMER_PK = 0xA11CE;
 
   address internal _owner = makeAddr('owner');
-  address internal _factory = makeAddr('factory');
   address internal _claimer;
   address internal _target = makeAddr('target');
+  address internal _allowed7702 = makeAddr('allowed7702');
   bytes32 internal constant _PUBKEY = 0x391823cee659f38512ccde6c2bb6f4e32e917478ee2e96d4f5e05656e7adb2ae;
   bytes32 internal constant _NPUB_HASH = 0x540d126644e922328318f1870ba0c9de3b2d5c0c271e27af7efea3e44025fdc1;
   bytes32 internal constant _SALT = 0x1111111111111111111111111111111111111111111111111111111111111111;
@@ -33,6 +34,7 @@ contract UnitPactoGlobalPaymaster is Test {
     hex'715358459e600817a7e0fb4371b594a9e36f8c4f0272a41e4248fc3b1021accf6cdf2d2718424a5491d94ae1935fbb1b569c3e92b23269143e71e3635be3efb2';
 
   MockEntryPoint internal _entryPoint;
+  PactoProtocolRegistry internal _registry;
   PactoUsernameNFT internal _nft;
   GlobalSponsorPool internal _pool;
   BootstrapMintPool internal _bootstrapPool;
@@ -45,20 +47,26 @@ contract UnitPactoGlobalPaymaster is Test {
     vm.warp(_ISSUED_AT);
 
     _entryPoint = new MockEntryPoint();
-    _pool = new GlobalSponsorPool(_factory);
-    _bootstrapPool = new BootstrapMintPool(_factory);
+    _registry = new PactoProtocolRegistry(_owner, address(this));
+    _pool = new GlobalSponsorPool(_registry);
+    _bootstrapPool = new BootstrapMintPool(_registry);
     _nft = new PactoUsernameNFT(_owner);
     _policy = new SponsorPolicyRegistry(_owner);
-    _bootstrapPolicy = new BootstrapClaimPolicy(_nft);
+    _bootstrapPolicy = new BootstrapClaimPolicy(_registry);
 
-    _paymaster = new PactoGlobalPaymasterHarness(
-      IEntryPoint(address(_entryPoint)), _nft, _pool, _bootstrapPool, _policy, _bootstrapPolicy, makeAddr('allowed7702')
+    _paymaster = new PactoGlobalPaymasterHarness(IEntryPoint(address(_entryPoint)), _registry);
+
+    _initializeRegistry(
+      _registry,
+      address(_nft),
+      address(_paymaster),
+      address(_pool),
+      address(_bootstrapPool),
+      address(_policy),
+      address(_bootstrapPolicy),
+      address(_entryPoint),
+      _allowed7702
     );
-
-    vm.startPrank(_factory);
-    _pool.wirePaymaster(address(_paymaster));
-    _bootstrapPool.wirePaymaster(address(_paymaster));
-    vm.stopPrank();
 
     vm.deal(address(this), 20 ether);
     _pool.deposit{value: 10 ether}();

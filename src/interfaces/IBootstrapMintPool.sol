@@ -12,10 +12,7 @@ interface IBootstrapMintPool {
   /// @notice Emitted when gas is spent from the pool
   event GasSpent(address indexed paymaster, uint256 amount);
 
-  /// @notice Emitted when the paymaster address is wired
-  event PaymasterWired(address indexed paymaster);
-
-  /// @notice Returns the wired paymaster address
+  /// @notice Returns the live paymaster address from the protocol registry
   function paymaster() external view returns (address paymasterAddress);
 
   /// @notice Returns total sponsor shares outstanding
@@ -47,8 +44,4 @@ interface IBootstrapMintPool {
   /// @notice Spends gas from the pool to reimburse the paymaster
   /// @param amount The wei amount to spend
   function spendGas(uint256 amount) external;
-
-  /// @notice Wires the paymaster address once at system bootstrap
-  /// @param paymasterAddress The global paymaster address
-  function wirePaymaster(address paymasterAddress) external;
 }

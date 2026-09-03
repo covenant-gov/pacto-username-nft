@@ -3,11 +3,9 @@ UnitPactoUsernameNFT::claim
 │   ├── it stores the username record for the npub
 │   ├── it mints the ERC-721 token to the claimer
 │   └── it emits UsernameClaimed
-├── when the name is too short
-│   └── it reverts
-├── when the name contains uppercase letters
-│   └── it reverts
 ├── when the name is already claimed
+│   └── it reverts
+├── when the name is reserved
 │   └── it reverts
 ├── when the npub already has a record
 │   └── it reverts
@@ -25,6 +23,13 @@ UnitPactoUsernameNFT::claim
 │   └── it reverts
 └── when the binding is expired
     └── it reverts
+
+
+UnitPactoUsernameNFT::nameAvailable
+├── when the name is short uppercase or has digits and hyphens
+│   └── it returns true
+└── when the name is reserved
+    └── it returns false
 
 
 UnitPactoUsernameNFT::initiateAddressTransfer

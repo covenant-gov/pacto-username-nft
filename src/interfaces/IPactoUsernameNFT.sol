@@ -4,14 +4,14 @@ pragma solidity 0.8.30;
 /// @notice On-chain username credential keyed by Nostr npub hash
 interface IPactoUsernameNFT {
   /// @notice Username record for a single npub identity
+  /// @param name Claimed username (immutable after claim; any string, unique on this contract)
+  /// @param evmAddress Active EVM controller eligible for sponsorship
+  /// @param pendingAddress Pending recipient during two-step address transfer (zero if none)
+  /// @param tokenId Linked ERC-721 token id
   struct UsernameRecord {
-    /// @notice Claimed lowercase username (immutable after claim)
     string name;
-    /// @notice Active EVM controller eligible for sponsorship
     address evmAddress;
-    /// @notice Pending recipient during two-step address transfer (zero if none)
     address pendingAddress;
-    /// @notice Linked ERC-721 token id
     uint256 tokenId;
   }
 
@@ -30,7 +30,7 @@ interface IPactoUsernameNFT {
   /// @notice Emitted when the mint fee is updated
   event MintFeeUpdated(uint256 mintFee);
 
-  /// @notice Thrown when a name fails validation rules
+  /// @notice Thrown when npubHash or pubkey is zero
   error PactoUsernameNFT_InvalidName();
 
   /// @notice Thrown when a name is reserved or already claimed
@@ -84,18 +84,12 @@ interface IPactoUsernameNFT {
   /// @notice Thrown when a transfer target equals the active controller
   error PactoUsernameNFT_InvalidTransferTarget();
 
-  /// @notice Returns the minimum allowed username length
-  function MIN_NAME_LENGTH() external view returns (uint256 minNameLength);
-
-  /// @notice Returns the maximum allowed username length
-  function MAX_NAME_LENGTH() external view returns (uint256 maxNameLength);
-
   /// @notice Returns the fee required to claim a username
   function mintFee() external view returns (uint256 fee);
 
   /// @notice Returns whether a name can be claimed
   /// @param _name The candidate username
-  /// @return available True when the name is valid and unclaimed
+  /// @return available True when the name is unclaimed and not reserved
   function nameAvailable(string calldata _name) external view returns (bool available);
 
   /// @notice Returns whether a name hash is reserved
@@ -159,7 +153,7 @@ interface IPactoUsernameNFT {
   ) external view returns (bytes32 digest);
 
   /// @notice Claims a username for an npub with dual Nostr and EVM attestation
-  /// @param name The lowercase username to claim
+  /// @param name The username to claim
   /// @param npubHash The hashed npub identity
   /// @param pubkey The 32-byte x-only Nostr public key
   /// @param nonce Binding nonce for replay protection
