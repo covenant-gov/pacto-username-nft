@@ -5,6 +5,7 @@ import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
 import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {UserOpCalldataLib} from 'contracts/utils/UserOpCalldataLib.sol';
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 import {ProtocolRegistryTestBase} from 'test/helpers/ProtocolRegistryTestBase.sol';
 
 contract UnitBootstrapClaimPolicy is ProtocolRegistryTestBase {
@@ -167,7 +168,7 @@ contract UnitBootstrapClaimPolicy is ProtocolRegistryTestBase {
     bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
 
     vm.prank(_owner);
-    _registry.setUsernameNft(address(_newNft));
+    _registry.set(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, address(_newNft));
 
     assertFalse(_policy.isSponsorable(address(_nft), _innerCallData, _claimer, 0));
     assertTrue(_policy.isSponsorable(address(_newNft), _innerCallData, _claimer, 0));

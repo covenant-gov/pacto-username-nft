@@ -74,50 +74,50 @@ contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
     _registry.initialize(_addresses);
   }
 
-  function test_SetUsernameNft_WhenCalledByOwner() external {
+  function test_Set_WhenCalledByOwner() external {
     _registry.initialize(_sampleAddresses());
     address _newNft = makeAddr('newNft');
 
     vm.expectEmit(true, true, true, true, address(_registry));
-    emit IPactoProtocolRegistry.UsernameNftUpdated(_newNft);
+    emit IPactoProtocolRegistry.ProtocolAddressUpdated(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, _newNft);
 
     vm.prank(_owner);
-    _registry.setUsernameNft(_newNft);
+    _registry.set(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, _newNft);
 
     assertEq(_registry.usernameNft(), _newNft);
   }
 
-  function test_SetUsernameNft_WhenCalledByNonOwner() external {
+  function test_Set_WhenCalledByNonOwner() external {
     _registry.initialize(_sampleAddresses());
 
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _other));
     vm.prank(_other);
-    _registry.setUsernameNft(makeAddr('newNft'));
+    _registry.set(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, makeAddr('newNft'));
   }
 
-  function test_SetUsernameNft_WhenAddressIsZero() external {
+  function test_Set_WhenAddressIsZero() external {
     _registry.initialize(_sampleAddresses());
 
     vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_ZeroAddress.selector);
     vm.prank(_owner);
-    _registry.setUsernameNft(address(0));
+    _registry.set(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, address(0));
   }
 
-  function test_SetPaymaster_WhenCalledByOwner() external {
+  function test_Set_WhenPaymasterCalledByOwner() external {
     _registry.initialize(_sampleAddresses());
     address _newPaymaster = makeAddr('newPaymaster');
 
     vm.prank(_owner);
-    _registry.setPaymaster(_newPaymaster);
+    _registry.set(IPactoProtocolRegistry.ProtocolComponent.Paymaster, _newPaymaster);
 
     assertEq(_registry.paymaster(), _newPaymaster);
   }
 
-  function test_SetAllowed7702Implementation_WhenCalledByOwner() external {
+  function test_Set_WhenAllowed7702ImplementationIsZero() external {
     _registry.initialize(_sampleAddresses());
 
     vm.prank(_owner);
-    _registry.setAllowed7702Implementation(address(0));
+    _registry.set(IPactoProtocolRegistry.ProtocolComponent.Allowed7702Implementation, address(0));
 
     assertEq(_registry.allowed7702Implementation(), address(0));
   }

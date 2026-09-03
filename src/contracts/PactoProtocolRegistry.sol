@@ -65,58 +65,22 @@ contract PactoProtocolRegistry is IPactoProtocolRegistry, Ownable {
   }
 
   /// @inheritdoc IPactoProtocolRegistry
-  function setUsernameNft(address usernameNftAddress) external onlyOwner {
-    if (usernameNftAddress == address(0)) revert ProtocolRegistry_ZeroAddress();
-    usernameNft = usernameNftAddress;
-    emit UsernameNftUpdated(usernameNftAddress);
-  }
+  function set(ProtocolComponent component, address addr) external onlyOwner {
+    if (component != ProtocolComponent.Allowed7702Implementation && addr == address(0)) {
+      revert ProtocolRegistry_ZeroAddress();
+    }
 
-  /// @inheritdoc IPactoProtocolRegistry
-  function setPaymaster(address paymasterAddress) external onlyOwner {
-    if (paymasterAddress == address(0)) revert ProtocolRegistry_ZeroAddress();
-    paymaster = paymasterAddress;
-    emit PaymasterUpdated(paymasterAddress);
-  }
+    if (component == ProtocolComponent.UsernameNft) usernameNft = addr;
+    else if (component == ProtocolComponent.Paymaster) paymaster = addr;
+    else if (component == ProtocolComponent.Pool) pool = addr;
+    else if (component == ProtocolComponent.BootstrapPool) bootstrapPool = addr;
+    else if (component == ProtocolComponent.Policy) policy = addr;
+    else if (component == ProtocolComponent.BootstrapPolicy) bootstrapPolicy = addr;
+    else if (component == ProtocolComponent.EntryPoint) entryPoint = addr;
+    else if (component == ProtocolComponent.Allowed7702Implementation) allowed7702Implementation = addr;
+    else revert ProtocolRegistry_InvalidComponent();
 
-  /// @inheritdoc IPactoProtocolRegistry
-  function setPool(address poolAddress) external onlyOwner {
-    if (poolAddress == address(0)) revert ProtocolRegistry_ZeroAddress();
-    pool = poolAddress;
-    emit PoolUpdated(poolAddress);
-  }
-
-  /// @inheritdoc IPactoProtocolRegistry
-  function setBootstrapPool(address bootstrapPoolAddress) external onlyOwner {
-    if (bootstrapPoolAddress == address(0)) revert ProtocolRegistry_ZeroAddress();
-    bootstrapPool = bootstrapPoolAddress;
-    emit BootstrapPoolUpdated(bootstrapPoolAddress);
-  }
-
-  /// @inheritdoc IPactoProtocolRegistry
-  function setPolicy(address policyAddress) external onlyOwner {
-    if (policyAddress == address(0)) revert ProtocolRegistry_ZeroAddress();
-    policy = policyAddress;
-    emit PolicyUpdated(policyAddress);
-  }
-
-  /// @inheritdoc IPactoProtocolRegistry
-  function setBootstrapPolicy(address bootstrapPolicyAddress) external onlyOwner {
-    if (bootstrapPolicyAddress == address(0)) revert ProtocolRegistry_ZeroAddress();
-    bootstrapPolicy = bootstrapPolicyAddress;
-    emit BootstrapPolicyUpdated(bootstrapPolicyAddress);
-  }
-
-  /// @inheritdoc IPactoProtocolRegistry
-  function setEntryPoint(address entryPointAddress) external onlyOwner {
-    if (entryPointAddress == address(0)) revert ProtocolRegistry_ZeroAddress();
-    entryPoint = entryPointAddress;
-    emit EntryPointUpdated(entryPointAddress);
-  }
-
-  /// @inheritdoc IPactoProtocolRegistry
-  function setAllowed7702Implementation(address allowed7702) external onlyOwner {
-    allowed7702Implementation = allowed7702;
-    emit Allowed7702ImplementationUpdated(allowed7702);
+    emit ProtocolAddressUpdated(component, addr);
   }
 
   /// @notice Reverts when a required protocol address is zero

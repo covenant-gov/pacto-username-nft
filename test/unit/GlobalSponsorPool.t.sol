@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
 import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 import {ISponsorCommon} from 'interfaces/ISponsorCommon.sol';
 import {ProtocolRegistryTestBase} from 'test/helpers/ProtocolRegistryTestBase.sol';
 
@@ -65,7 +66,7 @@ contract UnitGlobalSponsorPool is ProtocolRegistryTestBase {
     _pool.deposit{value: 1 ether}();
 
     vm.prank(_owner);
-    _registry.setPaymaster(_newPaymaster);
+    _registry.set(IPactoProtocolRegistry.ProtocolComponent.Paymaster, _newPaymaster);
 
     vm.expectRevert(ISponsorCommon.Sponsor_NotPaymaster.selector);
     vm.prank(_paymaster);

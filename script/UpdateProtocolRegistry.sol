@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 
 import {DeploymentArtifacts} from 'script/DeploymentArtifacts.sol';
 
@@ -82,18 +83,28 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
   function _applyUpdates(PactoProtocolRegistry registry, RegistryUpdates memory updates, address deployer) internal {
     address _oldNft = registry.usernameNft();
     if (updates.usernameNft != address(0) && updates.usernameNft != _oldNft) {
-      registry.setUsernameNft(updates.usernameNft);
+      registry.set(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, updates.usernameNft);
       if (deployer == registry.owner()) {
         _migrateMemberPolicySelectors(SponsorPolicyRegistry(registry.policy()), _oldNft, updates.usernameNft);
       }
     }
-    if (updates.paymaster != address(0)) registry.setPaymaster(updates.paymaster);
-    if (updates.pool != address(0)) registry.setPool(updates.pool);
-    if (updates.bootstrapPool != address(0)) registry.setBootstrapPool(updates.bootstrapPool);
-    if (updates.policy != address(0)) registry.setPolicy(updates.policy);
-    if (updates.bootstrapPolicy != address(0)) registry.setBootstrapPolicy(updates.bootstrapPolicy);
-    if (updates.entryPoint != address(0)) registry.setEntryPoint(updates.entryPoint);
-    if (updates.has7702Env) registry.setAllowed7702Implementation(updates.allowed7702);
+    if (updates.paymaster != address(0)) {
+      registry.set(IPactoProtocolRegistry.ProtocolComponent.Paymaster, updates.paymaster);
+    }
+    if (updates.pool != address(0)) registry.set(IPactoProtocolRegistry.ProtocolComponent.Pool, updates.pool);
+    if (updates.bootstrapPool != address(0)) {
+      registry.set(IPactoProtocolRegistry.ProtocolComponent.BootstrapPool, updates.bootstrapPool);
+    }
+    if (updates.policy != address(0)) registry.set(IPactoProtocolRegistry.ProtocolComponent.Policy, updates.policy);
+    if (updates.bootstrapPolicy != address(0)) {
+      registry.set(IPactoProtocolRegistry.ProtocolComponent.BootstrapPolicy, updates.bootstrapPolicy);
+    }
+    if (updates.entryPoint != address(0)) {
+      registry.set(IPactoProtocolRegistry.ProtocolComponent.EntryPoint, updates.entryPoint);
+    }
+    if (updates.has7702Env) {
+      registry.set(IPactoProtocolRegistry.ProtocolComponent.Allowed7702Implementation, updates.allowed7702);
+    }
   }
 
   /// @notice Logs the live registry slots
