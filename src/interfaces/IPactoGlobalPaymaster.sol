@@ -41,4 +41,32 @@ interface IPactoGlobalPaymaster {
 
   /// @notice Thrown when a required address is zero
   error GlobalPaymaster_ZeroAddress();
+
+  /// @notice Thrown when paymaster payload member is the zero address
+  error GlobalPaymaster_ZeroMember();
+
+  /// @notice Thrown when BootstrapMintPool cannot cover maxCost headroom
+  /// @param spendable Current spendable pool balance
+  /// @param required Required balance including headroom
+  error GlobalPaymaster_InsufficientBootstrapPool(uint256 spendable, uint256 required);
+
+  /// @notice Thrown when GlobalSponsorPool cannot cover maxCost headroom
+  /// @param spendable Current spendable pool balance
+  /// @param required Required balance including headroom
+  error GlobalPaymaster_InsufficientMemberPool(uint256 spendable, uint256 required);
+
+  /// @notice Thrown when bootstrap execute value is non-zero
+  error GlobalPaymaster_NonZeroValue();
+
+  /// @notice Thrown when inner calldata is not a valid claim with matching npubHash
+  error GlobalPaymaster_InvalidClaimPayload();
+
+  /// @notice Thrown when BootstrapClaimPolicy rejects the call
+  error GlobalPaymaster_BootstrapNotSponsorable();
+
+  /// @notice Thrown when eligibleMember fails or npubHash mismatches on the member path
+  error GlobalPaymaster_IneligibleMember();
+
+  /// @notice Thrown when SponsorPolicyRegistry rejects the call
+  error GlobalPaymaster_MemberNotSponsorable();
 }

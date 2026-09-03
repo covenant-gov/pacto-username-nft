@@ -10,7 +10,6 @@ import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
 import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 
 import {BasePaymaster} from '@account-abstraction/core/BasePaymaster.sol';
-import {SIG_VALIDATION_FAILED} from '@account-abstraction/core/Helpers.sol';
 import {UserOperationLib} from '@account-abstraction/core/UserOperationLib.sol';
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
@@ -82,9 +81,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
   ) internal view override returns (bytes memory context, uint256 validationData) {
     PaymasterData memory _data = _parsePaymasterData(userOp.paymasterAndData);
 
-    if (!_isMemberBindingValid(userOp.getSender(), _data.member)) {
-      return ('', SIG_VALIDATION_FAILED);
-    }
+    _requireMemberBindingValid(userOp.getSender(), _data.member);
 
     (address _target, uint256 _value, bytes calldata _innerCallData, bool _validCall) =
       UserOpCalldataLib.decodeExecute(userOp.callData);
@@ -105,18 +102,23 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     bytes calldata innerCallData,
     uint256 maxCost
   ) internal view returns (bytes memory context, uint256 validationData) {
-    uint256 _requiredBalance = (maxCost * _BALANCE_HEADROOM_BPS) / 10_000;
-    if (IBootstrapMintPool(payable(REGISTRY.bootstrapPool())).spendablePoolWei() < _requiredBalance) {
-      return ('', SIG_VALIDATION_FAILED);
+    {
+      uint256 _requiredBalance = (maxCost * _BALANCE_HEADROOM_BPS) / 10_000;
+      uint256 _spendable = IBootstrapMintPool(payable(REGISTRY.bootstrapPool())).spendablePoolWei();
+      if (_spendable < _requiredBalance) {
+        revert GlobalPaymaster_InsufficientBootstrapPool(_spendable, _requiredBalance);
+      }
     }
 
-    if (value != 0) return ('', SIG_VALIDATION_FAILED);
+    if (value != 0) revert GlobalPaymaster_NonZeroValue();
 
-    (bytes32 _claimNpubHash, bool _validClaim) = _decodeClaimNpubHash(innerCallData);
-    if (!_validClaim || _claimNpubHash != data.npubHash) return ('', SIG_VALIDATION_FAILED);
+    {
+      (bytes32 _claimNpubHash, bool _validClaim) = _decodeClaimNpubHash(innerCallData);
+      if (!_validClaim || _claimNpubHash != data.npubHash) revert GlobalPaymaster_InvalidClaimPayload();
+    }
 
     if (!ISponsorPolicy(REGISTRY.bootstrapPolicy()).isSponsorable(target, innerCallData, data.member, 0)) {
-      return ('', SIG_VALIDATION_FAILED);
+      revert GlobalPaymaster_BootstrapNotSponsorable();
     }
 
     context = abi.encodePacked(_BOOTSTRAP_CONTEXT);
@@ -132,18 +134,25 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
   ) internal view returns (bytes memory context, uint256 validationData) {
     if (data.policy != address(0)) revert GlobalPaymaster_CustomPolicyNotAllowed();
 
-    uint256 _requiredBalance = (maxCost * _BALANCE_HEADROOM_BPS) / 10_000;
-    if (IGlobalSponsorPool(payable(REGISTRY.pool())).spendablePoolWei() < _requiredBalance) {
-      return ('', SIG_VALIDATION_FAILED);
+    {
+      uint256 _requiredBalance = (maxCost * _BALANCE_HEADROOM_BPS) / 10_000;
+      uint256 _spendable = IGlobalSponsorPool(payable(REGISTRY.pool())).spendablePoolWei();
+      if (_spendable < _requiredBalance) {
+        revert GlobalPaymaster_InsufficientMemberPool(_spendable, _requiredBalance);
+      }
     }
 
-    (bytes32 _npubHash, uint256 _tokenId) = IPactoUsernameNFT(REGISTRY.usernameNft()).eligibleMember(data.member);
-    if (_npubHash == bytes32(0) || _npubHash != data.npubHash) {
-      return ('', SIG_VALIDATION_FAILED);
+    uint256 _tokenId;
+    {
+      bytes32 _npubHash;
+      (_npubHash, _tokenId) = IPactoUsernameNFT(REGISTRY.usernameNft()).eligibleMember(data.member);
+      if (_npubHash == bytes32(0) || _npubHash != data.npubHash) {
+        revert GlobalPaymaster_IneligibleMember();
+      }
     }
 
     if (!ISponsorPolicy(REGISTRY.policy()).isSponsorable(target, innerCallData, data.member, _tokenId)) {
-      return ('', SIG_VALIDATION_FAILED);
+      revert GlobalPaymaster_MemberNotSponsorable();
     }
 
     context = abi.encodePacked(_MEMBER_CONTEXT);
@@ -163,24 +172,23 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
   /// @notice Validates member binding for EOAs and EIP-7702 delegated senders
   /// @param sender The UserOp sender address
   /// @param member The member address from paymaster data
-  /// @return valid True when the sender is bound to the member
-  function _isMemberBindingValid(address sender, address member) internal view returns (bool valid) {
-    if (member == address(0)) return false;
+  function _requireMemberBindingValid(address sender, address member) internal view {
+    if (member == address(0)) revert GlobalPaymaster_ZeroMember();
 
     bytes memory _code = sender.code;
     if (_code.length == 0) {
       if (sender != member) revert GlobalPaymaster_InvalidMemberBinding(sender, member);
-      return true;
+      return;
     }
 
     if (_isEip7702Delegation(_code)) {
       if (sender != member) revert GlobalPaymaster_InvalidMemberBinding(sender, member);
       address _impl = _eip7702Implementation(_code);
       if (_impl != ALLOWED_7702_IMPLEMENTATION()) revert GlobalPaymaster_Invalid7702Implementation(_impl);
-      return true;
+      return;
     }
 
-    return sender == member;
+    if (sender != member) revert GlobalPaymaster_InvalidMemberBinding(sender, member);
   }
 
   /// @notice True when code is an EIP-7702 delegation stub

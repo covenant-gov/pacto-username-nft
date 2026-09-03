@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {SIG_VALIDATION_FAILED} from '@account-abstraction/core/Helpers.sol';
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
@@ -94,10 +93,8 @@ contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
     PackedUserOperation memory _userOp = _buildUserOp(_claimer, _deniedTarget, hex'', 0);
     _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
 
-    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
-
-    assertEq(_validationData, SIG_VALIDATION_FAILED);
-    assertEq(_context.length, 0);
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_MemberNotSponsorable.selector);
+    _paymaster.exposedValidate(_userOp, 1 ether);
   }
 
   function test_ExposedValidate_WhenCustomPolicyIsProvidedOnMemberPath() external {
@@ -128,10 +125,8 @@ contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
     PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 1);
     _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
 
-    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
-
-    assertEq(_validationData, SIG_VALIDATION_FAILED);
-    assertEq(_context.length, 0);
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_NonZeroValue.selector);
+    _paymaster.exposedValidate(_userOp, 1 ether);
   }
 
   function test_ExposedValidate_WhenBootstrapNpubHashDoesNotMatchPayload() external {
@@ -139,10 +134,8 @@ contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
     PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 0);
     _userOp.paymasterAndData = _buildPaymasterData(keccak256('other-npub'), _claimer, address(0));
 
-    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
-
-    assertEq(_validationData, SIG_VALIDATION_FAILED);
-    assertEq(_context.length, 0);
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_InvalidClaimPayload.selector);
+    _paymaster.exposedValidate(_userOp, 1 ether);
   }
 
   function test_ExposedValidate_WhenBootstrapPoolHasInsufficientHeadroom() external {
@@ -150,10 +143,61 @@ contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
     PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 0);
     _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
 
-    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 10 ether);
+    uint256 _required = (10 ether * 11_500) / 10_000;
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IPactoGlobalPaymaster.GlobalPaymaster_InsufficientBootstrapPool.selector, 10 ether, _required
+      )
+    );
+    _paymaster.exposedValidate(_userOp, 10 ether);
+  }
 
-    assertEq(_validationData, SIG_VALIDATION_FAILED);
-    assertEq(_context.length, 0);
+  function test_ExposedValidate_WhenBootstrapTargetIsNotRegistryNft() external {
+    PactoUsernameNFT _otherNft = new PactoUsernameNFT(_owner);
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_otherNft), _innerCallData, 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_BootstrapNotSponsorable.selector);
+    _paymaster.exposedValidate(_userOp, 1 ether);
+  }
+
+  function test_ExposedValidate_WhenEip7702DelegationMatchesAllowlist() external {
+    bytes memory _stub = abi.encodePacked(bytes3(0xef0100), bytes20(_allowed7702));
+    vm.etch(_claimer, _stub);
+
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
+
+    assertEq(_validationData, 0);
+    assertEq(_context, hex'00');
+  }
+
+  function test_ExposedValidate_WhenEip7702DelegationImplIsWrong() external {
+    address _wrongImpl = makeAddr('wrong7702');
+    bytes memory _stub = abi.encodePacked(bytes3(0xef0100), bytes20(_wrongImpl));
+    vm.etch(_claimer, _stub);
+
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    vm.expectRevert(
+      abi.encodeWithSelector(IPactoGlobalPaymaster.GlobalPaymaster_Invalid7702Implementation.selector, _wrongImpl)
+    );
+    _paymaster.exposedValidate(_userOp, 1 ether);
+  }
+
+  function test_ExposedValidate_WhenMemberIsZero() external {
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, address(0), address(0));
+
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_ZeroMember.selector);
+    _paymaster.exposedValidate(_userOp, 1 ether);
   }
 
   function test_ExposedPostOp_WhenBootstrapPathBillsBootstrapPool() external {

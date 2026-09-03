@@ -228,6 +228,8 @@ See [PACTO_SQUAD_SPONSOR.md](https://github.com/covenant-gov/pacto-app/blob/main
 
 EIP-7702 **activation** gas is funded separately by ops — not from bootstrap or global pools.
 
+**Empty bundler `reason: 0x` after L1 OK is not “transport only.”** L1 `eth_call` of bare `claim(...)` does not wrap `execute` and does not run paymaster validation. Pimlico `eth_estimateUserOperationGas` also simulates account + paymaster. `PactoGlobalPaymaster` reverts with typed selectors on product rejects (pool headroom, wrong NFT target vs `REGISTRY.usernameNft()`, claim payload mismatch, policy deny, bad 7702 impl, etc.). Decode the 4-byte selector before blaming shared 7702 helpers.
+
 ---
 
 ## 9. Rust / Alloy bindings (proposed)

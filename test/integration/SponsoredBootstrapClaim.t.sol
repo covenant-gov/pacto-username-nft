@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {SIG_VALIDATION_FAILED} from '@account-abstraction/core/Helpers.sol';
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
@@ -9,6 +8,7 @@ import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 import {UsernameSystemFactory} from 'contracts/UsernameSystemFactory.sol';
+import {IPactoGlobalPaymaster} from 'interfaces/IPactoGlobalPaymaster.sol';
 import {IntegrationBase} from 'test/integration/IntegrationBase.sol';
 import {MockEntryPoint} from 'test/mocks/MockEntryPoint.sol';
 
@@ -61,10 +61,29 @@ contract IntegrationSponsoredBootstrapClaim is IntegrationBase {
     executeClaim();
 
     PackedUserOperation memory _replayUserOp = buildBootstrapClaimUserOp();
-    (bytes memory _context, uint256 _validationData) = paymaster.exposedValidate(_replayUserOp, 1 ether);
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_MemberNotSponsorable.selector);
+    paymaster.exposedValidate(_replayUserOp, 1 ether);
+  }
 
-    assertEq(_validationData, SIG_VALIDATION_FAILED);
-    assertEq(_context.length, 0);
+  function test_SponsoredBootstrapClaim_WhenExecuteTargetIsNotRegistryNft() external {
+    PactoUsernameNFT _otherNft = new PactoUsernameNFT(owner);
+    PackedUserOperation memory _userOp =
+      buildUserOp(claimer, address(_otherNft), claimCalldata(USERNAME, NPUB_HASH, NOSTR_SIGNATURE), 0);
+    _userOp.paymasterAndData = buildPaymasterData(NPUB_HASH, claimer, address(0));
+
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_BootstrapNotSponsorable.selector);
+    paymaster.exposedValidate(_userOp, 1 ether);
+  }
+
+  function test_SponsoredBootstrapClaim_WhenEip7702DelegationIsAllowlisted() external {
+    bytes memory _stub = abi.encodePacked(bytes3(0xef0100), bytes20(allowed7702));
+    vm.etch(claimer, _stub);
+
+    PackedUserOperation memory _userOp = buildBootstrapClaimUserOp();
+    (bytes memory _context, uint256 _validationData) = paymaster.exposedValidate(_userOp, 1 ether);
+
+    assertEq(_validationData, 0);
+    assertEq(_context, hex'00');
   }
 
   function test_SponsoredMemberAction_AfterBootstrapMintUsesGlobalPool() external {
