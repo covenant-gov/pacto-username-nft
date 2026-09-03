@@ -16,6 +16,7 @@ After deploy, pin addresses from `deployments/<chainId>/full-system.json` into p
   "networks": {
     "sepolia": {
       "globalUsernameSponsor": {
+        "protocolRegistry": "0x…",
         "usernameSystemFactory": "0x…",
         "pactoUsernameNft": "0x…",
         "globalSponsorPool": "0x…",
@@ -131,8 +132,9 @@ Relay and chain use the **same field tuple** but the contract verifies the compa
 
 ### Preclaim validation (client)
 
-- Name: lowercase `[a-z]`, length 3–32.
-- `PactoUsernameNFT.nameAvailable(name)`.
+- Name: any string accepted by NIP-01 kind 0 `name` (no on-chain charset/length rules).
+- `PactoUsernameNFT.nameAvailable(name)` (unclaimed and not reserved).
+- Prefer reading the live NFT from `PactoProtocolRegistry.usernameNft()` over a stale address book.
 - `npubOf(evmAddress) == 0` and `canBootstrapClaim(evmAddress, npubHash)`.
 - `BootstrapMintPool.spendablePoolWei()` > 0 (if using bootstrap path).
 

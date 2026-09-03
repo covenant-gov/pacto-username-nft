@@ -117,25 +117,36 @@ contract UnitPactoUsernameNFT is Test {
     assertEq(_nft.npubOf(_claimer), _NPUB_HASH);
     assertEq(_nft.usedNonce(_NPUB_HASH), 1);
     assertTrue(_nft.nameAvailable('unused'));
+    assertTrue(_nft.nameAvailable('DaoPunk'));
+    assertTrue(_nft.nameAvailable('ab'));
+    assertTrue(_nft.nameAvailable('user-1'));
     assertFalse(_nft.nameAvailable(_NAME));
     assertTrue(_nft.canBootstrapClaim(_other, _OTHER_NPUB_HASH));
     assertFalse(_nft.canBootstrapClaim(_claimer, _OTHER_NPUB_HASH));
   }
 
-  function test_Claim_WhenTheNameIsTooShort() external {
-    bytes memory _evmSignature = _claimSignature(_claimer, 'ab', _NPUB_HASH, 1, _ISSUED_AT, _SALT);
-
-    vm.expectRevert(IPactoUsernameNFT.PactoUsernameNFT_InvalidName.selector);
-    vm.prank(_claimer);
-    _nft.claim('ab', _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
+  function test_NameAvailable_WhenTheNameIsShortUppercaseOrHasDigitsAndHyphens() external view {
+    assertTrue(_nft.nameAvailable('ab'));
+    assertTrue(_nft.nameAvailable('DaoPunk'));
+    assertTrue(_nft.nameAvailable('user-1'));
   }
 
-  function test_Claim_WhenTheNameContainsUppercaseLetters() external {
-    bytes memory _evmSignature = _claimSignature(_claimer, 'DaoPunk', _NPUB_HASH, 1, _ISSUED_AT, _SALT);
+  function test_NameAvailable_WhenTheNameIsReserved() external {
+    vm.prank(_owner);
+    _nft.setReservedName(keccak256(bytes(_NAME)), true);
 
-    vm.expectRevert(IPactoUsernameNFT.PactoUsernameNFT_InvalidName.selector);
+    assertFalse(_nft.nameAvailable(_NAME));
+  }
+
+  function test_Claim_WhenTheNameIsReserved() external {
+    vm.prank(_owner);
+    _nft.setReservedName(keccak256(bytes(_NAME)), true);
+
+    bytes memory _evmSignature = _claimSignature(_claimer, _NAME, _NPUB_HASH, 1, _ISSUED_AT, _SALT);
+
+    vm.expectRevert(IPactoUsernameNFT.PactoUsernameNFT_NameUnavailable.selector);
     vm.prank(_claimer);
-    _nft.claim('DaoPunk', _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
+    _nft.claim(_NAME, _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
   }
 
   function test_Claim_WhenTheNameIsAlreadyClaimed() external givenClaimedUsername {

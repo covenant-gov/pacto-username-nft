@@ -3,16 +3,14 @@ pragma solidity 0.8.30;
 
 import {ETHTransfer} from 'contracts/utils/ETHTransfer.sol';
 import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 import {ISponsorCommon} from 'interfaces/ISponsorCommon.sol';
 
 /// @title BootstrapMintPool
 /// @notice Protocol ETH vault for sponsored username NFT bootstrap mint gas
 contract BootstrapMintPool is IBootstrapMintPool {
-  /// @inheritdoc IBootstrapMintPool
-  address public paymaster;
-
-  /// @notice Factory allowed to wire the paymaster once
-  address public immutable factory;
+  /// @notice Protocol registry used to resolve the live paymaster
+  IPactoProtocolRegistry public immutable REGISTRY;
 
   /// @inheritdoc IBootstrapMintPool
   uint256 public totalShares;
@@ -24,10 +22,10 @@ contract BootstrapMintPool is IBootstrapMintPool {
   uint256 internal _spendablePoolWei;
 
   /// @notice Initializes the bootstrap mint pool
-  /// @param _factory The username system factory address
-  constructor(address _factory) {
-    if (_factory == address(0)) revert ISponsorCommon.Sponsor_ZeroAddress();
-    factory = _factory;
+  /// @param registry The protocol registry
+  constructor(IPactoProtocolRegistry registry) {
+    if (registry == IPactoProtocolRegistry(address(0))) revert ISponsorCommon.Sponsor_ZeroAddress();
+    REGISTRY = registry;
   }
 
   /// @notice Credits plain ETH sends to the depositor
@@ -38,6 +36,11 @@ contract BootstrapMintPool is IBootstrapMintPool {
   /// @notice Credits ETH sent with calldata to the depositor
   fallback() external payable {
     _deposit(msg.sender);
+  }
+
+  /// @inheritdoc IBootstrapMintPool
+  function paymaster() public view returns (address paymasterAddress) {
+    paymasterAddress = REGISTRY.paymaster();
   }
 
   /// @inheritdoc IBootstrapMintPool
@@ -82,23 +85,14 @@ contract BootstrapMintPool is IBootstrapMintPool {
 
   /// @inheritdoc IBootstrapMintPool
   function spendGas(uint256 amount) external {
-    if (msg.sender != paymaster) revert ISponsorCommon.Sponsor_NotPaymaster();
+    address _paymaster = paymaster();
+    if (msg.sender != _paymaster) revert ISponsorCommon.Sponsor_NotPaymaster();
     if (amount > _spendablePoolWei) revert ISponsorCommon.Sponsor_InsufficientBalance();
 
     _spendablePoolWei -= amount;
-    ETHTransfer.sendEth(paymaster, amount);
+    ETHTransfer.sendEth(_paymaster, amount);
 
     emit GasSpent(msg.sender, amount);
-  }
-
-  /// @inheritdoc IBootstrapMintPool
-  function wirePaymaster(address paymasterAddress) external {
-    if (msg.sender != factory) revert ISponsorCommon.Sponsor_NotFactory();
-    if (paymasterAddress == address(0)) revert ISponsorCommon.Sponsor_ZeroAddress();
-    if (paymaster != address(0)) revert ISponsorCommon.Sponsor_AlreadyInitialized();
-
-    paymaster = paymasterAddress;
-    emit PaymasterWired(paymasterAddress);
   }
 
   /// @notice Credits pro-rata sponsor shares for a depositor

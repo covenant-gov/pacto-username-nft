@@ -2,11 +2,12 @@
 pragma solidity 0.8.30;
 
 import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
+import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {UserOpCalldataLib} from 'contracts/utils/UserOpCalldataLib.sol';
-import {Test} from 'forge-std/Test.sol';
+import {ProtocolRegistryTestBase} from 'test/helpers/ProtocolRegistryTestBase.sol';
 
-contract UnitBootstrapClaimPolicy is Test {
+contract UnitBootstrapClaimPolicy is ProtocolRegistryTestBase {
   uint256 internal constant _CLAIMER_PK = 0xA11CE;
 
   address internal _owner = makeAddr('owner');
@@ -22,6 +23,7 @@ contract UnitBootstrapClaimPolicy is Test {
   bytes internal constant _NOSTR_SIGNATURE =
     hex'715358459e600817a7e0fb4371b594a9e36f8c4f0272a41e4248fc3b1021accf6cdf2d2718424a5491d94ae1935fbb1b569c3e92b23269143e71e3635be3efb2';
 
+  PactoProtocolRegistry internal _registry;
   PactoUsernameNFT internal _nft;
   BootstrapClaimPolicy internal _policy;
 
@@ -29,9 +31,20 @@ contract UnitBootstrapClaimPolicy is Test {
     _claimer = vm.addr(_CLAIMER_PK);
     vm.warp(_ISSUED_AT);
 
-    vm.prank(_owner);
+    _registry = new PactoProtocolRegistry(_owner, address(this));
     _nft = new PactoUsernameNFT(_owner);
-    _policy = new BootstrapClaimPolicy(_nft);
+    _policy = new BootstrapClaimPolicy(_registry);
+    _initializeRegistry(
+      _registry,
+      address(_nft),
+      makeAddr('paymaster'),
+      makeAddr('pool'),
+      makeAddr('bootstrapPool'),
+      makeAddr('policy'),
+      address(_policy),
+      makeAddr('entryPoint'),
+      address(0)
+    );
   }
 
   function _claimCalldata(
@@ -147,6 +160,17 @@ contract UnitBootstrapClaimPolicy is Test {
     bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, hex'010203');
 
     assertFalse(_policy.isSponsorable(address(_nft), _innerCallData, _claimer, 0));
+  }
+
+  function test_IsSponsorable_WhenUsernameNftIsUpdatedInTheRegistry() external {
+    PactoUsernameNFT _newNft = new PactoUsernameNFT(_owner);
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+
+    vm.prank(_owner);
+    _registry.setUsernameNft(address(_newNft));
+
+    assertFalse(_policy.isSponsorable(address(_nft), _innerCallData, _claimer, 0));
+    assertTrue(_policy.isSponsorable(address(_newNft), _innerCallData, _claimer, 0));
   }
 
   function _claimUsername() internal {

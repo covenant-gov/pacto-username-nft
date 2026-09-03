@@ -5,9 +5,11 @@ import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
 import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
+import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 import {IUsernameSystemFactory} from 'interfaces/IUsernameSystemFactory.sol';
 
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
@@ -22,22 +24,7 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
   uint32 public constant MIN_UNSTAKE_DELAY_SEC = 1 days;
 
   /// @inheritdoc IUsernameSystemFactory
-  address public immutable USERNAME_NFT;
-
-  /// @inheritdoc IUsernameSystemFactory
-  address public immutable POOL;
-
-  /// @inheritdoc IUsernameSystemFactory
-  address public immutable BOOTSTRAP_POOL;
-
-  /// @inheritdoc IUsernameSystemFactory
-  address public immutable POLICY;
-
-  /// @inheritdoc IUsernameSystemFactory
-  address public immutable BOOTSTRAP_POLICY;
-
-  /// @inheritdoc IUsernameSystemFactory
-  address public immutable PAYMASTER;
+  address public immutable REGISTRY;
 
   /// @inheritdoc IUsernameSystemFactory
   address public paymasterStaker;
@@ -49,26 +36,58 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
   constructor(IEntryPoint entryPoint, address owner, address allowed7702Implementation) {
     if (entryPoint == IEntryPoint(address(0)) || owner == address(0)) revert Factory_ZeroAddress();
 
-    POOL = address(new GlobalSponsorPool(address(this)));
-    USERNAME_NFT = address(new PactoUsernameNFT(owner));
-    POLICY = address(new SponsorPolicyRegistry(owner));
-    BOOTSTRAP_POOL = address(new BootstrapMintPool(address(this)));
-    BOOTSTRAP_POLICY = address(new BootstrapClaimPolicy(PactoUsernameNFT(USERNAME_NFT)));
+    PactoProtocolRegistry _registry = new PactoProtocolRegistry(owner, address(this));
+    REGISTRY = address(_registry);
 
-    PAYMASTER = address(
-      new PactoGlobalPaymaster(
-        entryPoint,
-        PactoUsernameNFT(USERNAME_NFT),
-        GlobalSponsorPool(payable(POOL)),
-        BootstrapMintPool(payable(BOOTSTRAP_POOL)),
-        SponsorPolicyRegistry(POLICY),
-        BootstrapClaimPolicy(BOOTSTRAP_POLICY),
-        allowed7702Implementation
-      )
+    address _pool = address(new GlobalSponsorPool(_registry));
+    address _nft = address(new PactoUsernameNFT(owner));
+    address _policy = address(new SponsorPolicyRegistry(owner));
+    address _bootstrapPool = address(new BootstrapMintPool(_registry));
+    address _bootstrapPolicy = address(new BootstrapClaimPolicy(_registry));
+    address _paymaster = address(new PactoGlobalPaymaster(entryPoint, _registry));
+
+    _registry.initialize(
+      IPactoProtocolRegistry.ProtocolAddresses({
+        usernameNft: _nft,
+        paymaster: _paymaster,
+        pool: _pool,
+        bootstrapPool: _bootstrapPool,
+        policy: _policy,
+        bootstrapPolicy: _bootstrapPolicy,
+        entryPoint: address(entryPoint),
+        allowed7702Implementation: allowed7702Implementation
+      })
     );
+  }
 
-    GlobalSponsorPool(payable(POOL)).wirePaymaster(PAYMASTER);
-    BootstrapMintPool(payable(BOOTSTRAP_POOL)).wirePaymaster(PAYMASTER);
+  /// @inheritdoc IUsernameSystemFactory
+  function USERNAME_NFT() public view returns (address usernameNft) {
+    usernameNft = IPactoProtocolRegistry(REGISTRY).usernameNft();
+  }
+
+  /// @inheritdoc IUsernameSystemFactory
+  function POOL() public view returns (address pool) {
+    pool = IPactoProtocolRegistry(REGISTRY).pool();
+  }
+
+  /// @inheritdoc IUsernameSystemFactory
+  function BOOTSTRAP_POOL() public view returns (address bootstrapPool) {
+    bootstrapPool = IPactoProtocolRegistry(REGISTRY).bootstrapPool();
+  }
+
+  /// @inheritdoc IUsernameSystemFactory
+  function POLICY() public view returns (address policy) {
+    policy = IPactoProtocolRegistry(REGISTRY).policy();
+  }
+
+  /// @inheritdoc IUsernameSystemFactory
+  function BOOTSTRAP_POLICY() public view returns (address bootstrapPolicy) {
+    bootstrapPolicy = IPactoProtocolRegistry(REGISTRY).bootstrapPolicy();
+  }
+
+  /// @inheritdoc IUsernameSystemFactory
+  function PAYMASTER() public view returns (address paymaster) {
+    paymaster = IPactoProtocolRegistry(REGISTRY).paymaster();
   }
 
   /// @inheritdoc IUsernameSystemFactory
@@ -89,14 +108,14 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
       revert Factory_StakeSlotOccupied(_staker);
     }
 
-    PactoGlobalPaymaster(payable(PAYMASTER)).addStake{value: msg.value}(unstakeDelaySec);
+    PactoGlobalPaymaster(payable(PAYMASTER())).addStake{value: msg.value}(unstakeDelaySec);
     emit PaymasterStakeAdded(_staker, msg.value, unstakeDelaySec);
   }
 
   /// @inheritdoc IUsernameSystemFactory
   function unlockPaymasterStake() external {
     _onlyPaymasterStaker();
-    PactoGlobalPaymaster(payable(PAYMASTER)).unlockStake();
+    PactoGlobalPaymaster(payable(PAYMASTER())).unlockStake();
     emit PaymasterStakeUnlocked(msg.sender);
   }
 
@@ -106,7 +125,7 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
     if (to == address(0)) revert Factory_ZeroAddress();
 
     address _staker = msg.sender;
-    PactoGlobalPaymaster(payable(PAYMASTER)).withdrawStake(to);
+    PactoGlobalPaymaster(payable(PAYMASTER())).withdrawStake(to);
     paymasterStaker = address(0);
     emit PaymasterStakeWithdrawn(_staker, to);
   }
@@ -117,7 +136,7 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
     if (to == address(0)) revert Factory_ZeroAddress();
     if (amount == 0) revert Factory_StakeTooSmall(0, 1);
 
-    PactoGlobalPaymaster(payable(PAYMASTER)).withdrawTo(to, amount);
+    PactoGlobalPaymaster(payable(PAYMASTER())).withdrawTo(to, amount);
     emit PaymasterDepositWithdrawn(msg.sender, to, amount);
   }
 

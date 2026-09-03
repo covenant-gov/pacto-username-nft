@@ -6,7 +6,6 @@ import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
-import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 import {UsernameSystemFactory} from 'contracts/UsernameSystemFactory.sol';

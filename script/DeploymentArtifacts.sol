@@ -51,50 +51,59 @@ abstract contract DeploymentArtifacts is Script {
     vm.writeJson(json, _deploymentJsonPath(filename));
   }
 
+  /// @notice Full-system deployment artifact fields
+  struct FullSystemArtifact {
+    address entryPoint;
+    address allowed7702Implementation;
+    address protocolRegistry;
+    address usernameSystemFactory;
+    address pactoUsernameNft;
+    address globalSponsorPool;
+    address bootstrapMintPool;
+    address sponsorPolicyRegistry;
+    address bootstrapClaimPolicy;
+    address pactoGlobalPaymaster;
+    address nostrClaimLink;
+    uint256 policyVersion;
+    address deployer;
+  }
+
   /// @notice Writes the username system deployment artifact
-  /// @param entryPoint The EntryPoint v0.7 address
-  /// @param allowed7702Implementation The allowlisted 7702 account implementation
-  /// @param usernameSystemFactory The factory address
-  /// @param pactoUsernameNft The username NFT address
-  /// @param globalSponsorPool The global sponsor pool address
-  /// @param bootstrapMintPool The bootstrap mint pool address
-  /// @param sponsorPolicyRegistry The policy registry address
-  /// @param bootstrapClaimPolicy The bootstrap claim policy address
-  /// @param pactoGlobalPaymaster The global paymaster address
-  /// @param nostrClaimLink The linked NostrClaimLink library address
-  /// @param policyVersion The initial policy version after seeding
-  /// @param deployer The deployer address
-  function _writeFullSystemJson(
-    address entryPoint,
-    address allowed7702Implementation,
-    address usernameSystemFactory,
-    address pactoUsernameNft,
-    address globalSponsorPool,
-    address bootstrapMintPool,
-    address sponsorPolicyRegistry,
-    address bootstrapClaimPolicy,
-    address pactoGlobalPaymaster,
-    address nostrClaimLink,
-    uint256 policyVersion,
-    address deployer
-  ) internal {
+  /// @param artifact The deployment addresses and metadata
+  function _writeFullSystemJson(FullSystemArtifact memory artifact) internal {
     if (!_shouldWriteDeploymentJson()) return;
 
     string memory _key = 'username_full_system';
     vm.serializeUint(_key, 'chainId', block.chainid);
-    vm.serializeAddress(_key, 'entryPoint', entryPoint);
-    vm.serializeAddress(_key, 'allowed7702Implementation', allowed7702Implementation);
-    vm.serializeAddress(_key, 'usernameSystemFactory', usernameSystemFactory);
-    vm.serializeAddress(_key, 'pactoUsernameNft', pactoUsernameNft);
-    vm.serializeAddress(_key, 'globalSponsorPool', globalSponsorPool);
-    vm.serializeAddress(_key, 'bootstrapMintPool', bootstrapMintPool);
-    vm.serializeAddress(_key, 'sponsorPolicyRegistry', sponsorPolicyRegistry);
-    vm.serializeAddress(_key, 'bootstrapClaimPolicy', bootstrapClaimPolicy);
-    vm.serializeAddress(_key, 'pactoGlobalPaymaster', pactoGlobalPaymaster);
-    vm.serializeAddress(_key, 'nostrClaimLink', nostrClaimLink);
-    vm.serializeUint(_key, 'policyVersion', policyVersion);
-    string memory _json = vm.serializeAddress(_key, 'deployer', deployer);
+    vm.serializeAddress(_key, 'entryPoint', artifact.entryPoint);
+    vm.serializeAddress(_key, 'allowed7702Implementation', artifact.allowed7702Implementation);
+    vm.serializeAddress(_key, 'protocolRegistry', artifact.protocolRegistry);
+    vm.serializeAddress(_key, 'usernameSystemFactory', artifact.usernameSystemFactory);
+    vm.serializeAddress(_key, 'pactoUsernameNft', artifact.pactoUsernameNft);
+    vm.serializeAddress(_key, 'globalSponsorPool', artifact.globalSponsorPool);
+    vm.serializeAddress(_key, 'bootstrapMintPool', artifact.bootstrapMintPool);
+    vm.serializeAddress(_key, 'sponsorPolicyRegistry', artifact.sponsorPolicyRegistry);
+    vm.serializeAddress(_key, 'bootstrapClaimPolicy', artifact.bootstrapClaimPolicy);
+    vm.serializeAddress(_key, 'pactoGlobalPaymaster', artifact.pactoGlobalPaymaster);
+    vm.serializeAddress(_key, 'nostrClaimLink', artifact.nostrClaimLink);
+    vm.serializeUint(_key, 'policyVersion', artifact.policyVersion);
+    string memory _json = vm.serializeAddress(_key, 'deployer', artifact.deployer);
     _writeDeploymentJson(_json, 'full-system.json');
+  }
+
+  /// @notice Writes a standalone username NFT deployment artifact
+  /// @param pactoUsernameNft The newly deployed username NFT
+  /// @param owner The NFT owner
+  /// @param deployer The deployer address
+  function _writeUsernameNftJson(address pactoUsernameNft, address owner, address deployer) internal {
+    if (!_shouldWriteDeploymentJson()) return;
+
+    string memory _key = 'username_nft';
+    vm.serializeUint(_key, 'chainId', block.chainid);
+    vm.serializeAddress(_key, 'pactoUsernameNft', pactoUsernameNft);
+    vm.serializeAddress(_key, 'owner', owner);
+    string memory _json = vm.serializeAddress(_key, 'deployer', deployer);
+    _writeDeploymentJson(_json, 'username-nft.json');
   }
 
   /// @notice Reads NostrClaimLink from forge broadcast libraries after deploy

@@ -9,22 +9,25 @@ interface IUsernameSystemFactory {
   /// @notice Minimum unstake delay in seconds
   function MIN_UNSTAKE_DELAY_SEC() external view returns (uint32 minUnstakeDelaySec);
 
-  /// @notice Deployed username NFT contract
+  /// @notice Protocol registry used as the live address book
+  function REGISTRY() external view returns (address registry);
+
+  /// @notice Live username NFT contract from the protocol registry
   function USERNAME_NFT() external view returns (address usernameNft);
 
-  /// @notice Deployed global sponsor pool
+  /// @notice Live global sponsor pool from the protocol registry
   function POOL() external view returns (address pool);
 
-  /// @notice Deployed bootstrap mint pool
+  /// @notice Live bootstrap mint pool from the protocol registry
   function BOOTSTRAP_POOL() external view returns (address bootstrapPool);
 
-  /// @notice Deployed sponsor policy registry
+  /// @notice Live sponsor policy registry from the protocol registry
   function POLICY() external view returns (address policy);
 
-  /// @notice Deployed bootstrap claim policy
+  /// @notice Live bootstrap claim policy from the protocol registry
   function BOOTSTRAP_POLICY() external view returns (address bootstrapPolicy);
 
-  /// @notice Deployed global paymaster
+  /// @notice Live global paymaster from the protocol registry
   function PAYMASTER() external view returns (address paymaster);
 
   /// @notice FCFS paymaster stake holder

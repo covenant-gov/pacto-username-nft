@@ -5,27 +5,12 @@ import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {IPaymaster} from '@account-abstraction/interfaces/IPaymaster.sol';
 import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOperation.sol';
 import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
-import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
-import {IGlobalSponsorPool} from 'interfaces/IGlobalSponsorPool.sol';
-import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
-import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 
 /// @notice Test harness exposing paymaster validation and postOp billing
 contract PactoGlobalPaymasterHarness is PactoGlobalPaymaster {
   /// @notice Deploys the harness with the same wiring as the production paymaster
-  constructor(
-    IEntryPoint entryPoint,
-    IPactoUsernameNFT usernameNft,
-    IGlobalSponsorPool pool,
-    IBootstrapMintPool bootstrapPool,
-    ISponsorPolicy defaultPolicy,
-    ISponsorPolicy bootstrapPolicy,
-    address allowed7702Implementation
-  )
-    PactoGlobalPaymaster(
-      entryPoint, usernameNft, pool, bootstrapPool, defaultPolicy, bootstrapPolicy, allowed7702Implementation
-    )
-  {}
+  constructor(IEntryPoint entryPoint, IPactoProtocolRegistry registry) PactoGlobalPaymaster(entryPoint, registry) {}
 
   /// @notice Exposes internal paymaster validation for unit tests
   function exposedValidate(

@@ -2,11 +2,7 @@
 pragma solidity 0.8.30;
 
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
-import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
-import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
-import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
-import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
-import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 import {IUsernameSystemFactory} from 'interfaces/IUsernameSystemFactory.sol';
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -20,6 +16,7 @@ contract VerifyDeploy is Script {
   using stdJson for string;
 
   string internal constant _FACTORY = 'src/contracts/UsernameSystemFactory.sol:UsernameSystemFactory';
+  string internal constant _REGISTRY = 'src/contracts/PactoProtocolRegistry.sol:PactoProtocolRegistry';
   string internal constant _NFT = 'src/contracts/PactoUsernameNFT.sol:PactoUsernameNFT';
   string internal constant _POOL = 'src/contracts/GlobalSponsorPool.sol:GlobalSponsorPool';
   string internal constant _BOOTSTRAP_POOL = 'src/contracts/BootstrapMintPool.sol:BootstrapMintPool';
@@ -31,6 +28,7 @@ contract VerifyDeploy is Script {
   struct Deployed {
     address entryPoint;
     address allowed7702;
+    address registry;
     address factory;
     address nft;
     address pool;
@@ -51,19 +49,23 @@ contract VerifyDeploy is Script {
 
     console.log('Verifying username contracts on', chain);
     _verify(d.nostrClaimLink, _NOSTR_CLAIM_LINK, chain, new bytes(0), '');
+    _verify(d.registry, _REGISTRY, chain, abi.encode(d.owner, d.factory), '');
     _verify(d.factory, _FACTORY, chain, abi.encode(IEntryPoint(d.entryPoint), d.owner, d.allowed7702), libFlag);
     _verify(d.nft, _NFT, chain, abi.encode(d.owner), libFlag);
-    _verify(d.pool, _POOL, chain, abi.encode(d.factory), '');
-    _verify(d.bootstrapPool, _BOOTSTRAP_POOL, chain, abi.encode(d.factory), '');
+    _verify(d.pool, _POOL, chain, abi.encode(IPactoProtocolRegistry(d.registry)), '');
+    _verify(d.bootstrapPool, _BOOTSTRAP_POOL, chain, abi.encode(IPactoProtocolRegistry(d.registry)), '');
     _verify(d.policy, _POLICY, chain, abi.encode(d.owner), '');
-    _verify(d.bootstrapPolicy, _BOOTSTRAP_POLICY, chain, abi.encode(IPactoUsernameNFT(d.nft)), '');
-    _verify(d.paymaster, _PAYMASTER, chain, _encodePaymaster(d), '');
+    _verify(d.bootstrapPolicy, _BOOTSTRAP_POLICY, chain, abi.encode(IPactoProtocolRegistry(d.registry)), '');
+    _verify(
+      d.paymaster, _PAYMASTER, chain, abi.encode(IEntryPoint(d.entryPoint), IPactoProtocolRegistry(d.registry)), ''
+    );
   }
 
   function _loadAndAssert() internal view returns (Deployed memory d) {
     string memory json = vm.readFile(string.concat('deployments/', vm.toString(block.chainid), '/full-system.json'));
     d.entryPoint = json.readAddress('.entryPoint');
     d.allowed7702 = json.readAddress('.allowed7702Implementation');
+    d.registry = json.readAddress('.protocolRegistry');
     d.factory = json.readAddress('.usernameSystemFactory');
     d.nft = json.readAddress('.pactoUsernameNft');
     d.pool = json.readAddress('.globalSponsorPool');
@@ -71,30 +73,28 @@ contract VerifyDeploy is Script {
     d.policy = json.readAddress('.sponsorPolicyRegistry');
     d.bootstrapPolicy = json.readAddress('.bootstrapClaimPolicy');
     d.paymaster = json.readAddress('.pactoGlobalPaymaster');
-    d.owner = Ownable(d.nft).owner();
+    d.owner = Ownable(d.registry).owner();
     d.nostrClaimLink = _resolveNostrClaimLink(json);
 
     IUsernameSystemFactory factory = IUsernameSystemFactory(d.factory);
+    IPactoProtocolRegistry registry = IPactoProtocolRegistry(d.registry);
+    require(factory.REGISTRY() == d.registry, 'verify: registry mismatch');
     require(factory.USERNAME_NFT() == d.nft, 'verify: NFT mismatch');
     require(factory.POOL() == d.pool, 'verify: pool mismatch');
     require(factory.BOOTSTRAP_POOL() == d.bootstrapPool, 'verify: bootstrap pool mismatch');
     require(factory.POLICY() == d.policy, 'verify: policy mismatch');
     require(factory.BOOTSTRAP_POLICY() == d.bootstrapPolicy, 'verify: bootstrap policy mismatch');
     require(factory.PAYMASTER() == d.paymaster, 'verify: paymaster mismatch');
+    require(registry.usernameNft() == d.nft, 'verify: registry NFT mismatch');
+    require(registry.paymaster() == d.paymaster, 'verify: registry paymaster mismatch');
+    require(registry.pool() == d.pool, 'verify: registry pool mismatch');
+    require(registry.bootstrapPool() == d.bootstrapPool, 'verify: registry bootstrap pool mismatch');
+    require(registry.policy() == d.policy, 'verify: registry policy mismatch');
+    require(registry.bootstrapPolicy() == d.bootstrapPolicy, 'verify: registry bootstrap policy mismatch');
+    require(registry.entryPoint() == d.entryPoint, 'verify: registry entryPoint mismatch');
+    require(registry.allowed7702Implementation() == d.allowed7702, 'verify: registry 7702 mismatch');
     require(d.nostrClaimLink != address(0), 'verify: missing NostrClaimLink');
     require(d.nostrClaimLink.code.length > 0, 'verify: NostrClaimLink has no code');
-  }
-
-  function _encodePaymaster(Deployed memory d) internal pure returns (bytes memory) {
-    return abi.encode(
-      IEntryPoint(d.entryPoint),
-      IPactoUsernameNFT(d.nft),
-      GlobalSponsorPool(payable(d.pool)),
-      BootstrapMintPool(payable(d.bootstrapPool)),
-      SponsorPolicyRegistry(d.policy),
-      BootstrapClaimPolicy(d.bootstrapPolicy),
-      d.allowed7702
-    );
   }
 
   /// @notice Resolves NostrClaimLink from artifact, then broadcast libraries, then env

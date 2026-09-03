@@ -6,7 +6,10 @@ interface IPactoGlobalPaymaster {
   /// @notice Paymaster payload version
   function PAYMASTER_DATA_VERSION() external view returns (uint8 version);
 
-  /// @notice Allowlisted EIP-7702 account implementation
+  /// @notice Protocol registry used to resolve live NFT, pools, and policies
+  function REGISTRY() external view returns (address registry);
+
+  /// @notice Allowlisted EIP-7702 account implementation from the protocol registry
   function ALLOWED_7702_IMPLEMENTATION() external view returns (address implementation);
 
   /// @notice Parsed global paymaster payload

@@ -14,12 +14,6 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
   using ECDSA for bytes32;
 
   /// @inheritdoc IPactoUsernameNFT
-  uint256 public constant MIN_NAME_LENGTH = 3;
-
-  /// @inheritdoc IPactoUsernameNFT
-  uint256 public constant MAX_NAME_LENGTH = 32;
-
-  /// @inheritdoc IPactoUsernameNFT
   uint256 public constant MAX_BINDING_AGE = 7 days;
 
   /// @inheritdoc IPactoUsernameNFT
@@ -63,7 +57,7 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
 
   /// @inheritdoc IPactoUsernameNFT
   function nameAvailable(string calldata _name) external view returns (bool available) {
-    return _isValidName(_name) && _nameToNpub[_name] == bytes32(0);
+    return _nameToNpub[_name] == bytes32(0) && !_reservedNames[keccak256(bytes(_name))];
   }
 
   /// @inheritdoc IPactoUsernameNFT
@@ -225,7 +219,6 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     uint256 _issuedAt
   ) internal view {
     if (_npubHash == bytes32(0) || _pubkey == bytes32(0)) revert PactoUsernameNFT_InvalidName();
-    if (!_isValidName(_name)) revert PactoUsernameNFT_InvalidName();
     if (_nameToNpub[_name] != bytes32(0) || _reservedNames[keccak256(bytes(_name))]) {
       revert PactoUsernameNFT_NameUnavailable();
     }
@@ -251,22 +244,6 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     if (_evmSignature.length != 65) revert PactoUsernameNFT_InvalidClaimSignature();
     address _signer = _digest.recover(_evmSignature);
     if (_signer != msg.sender) revert PactoUsernameNFT_InvalidClaimSignature();
-  }
-
-  /// @notice Validates a lowercase alphabetic username
-  /// @param _name The candidate username
-  /// @return valid True when the name satisfies length and charset rules
-  function _isValidName(string memory _name) internal pure returns (bool valid) {
-    bytes memory _nameBytes = bytes(_name);
-    uint256 _length = _nameBytes.length;
-    if (_length < MIN_NAME_LENGTH || _length > MAX_NAME_LENGTH) return false;
-
-    for (uint256 _i = 0; _i < _length; ++_i) {
-      bytes1 _char = _nameBytes[_i];
-      if (_char < 'a' || _char > 'z') return false;
-    }
-
-    return true;
   }
 
   /// @notice Computes the typed data hash for a claim binding

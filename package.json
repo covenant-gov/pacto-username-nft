@@ -16,6 +16,8 @@
     "deploy:arbitrum": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url arbitrum --account $ARBITRUM_DEPLOYER_NAME --broadcast --chain arbitrum -vvvvv && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url arbitrum --chain arbitrum -vvvv'",
     "deploy:mainnet": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url mainnet --account $MAINNET_DEPLOYER_NAME --broadcast --chain mainnet -vvvvv && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url mainnet --chain mainnet -vvvv'",
     "deploy:sepolia": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url sepolia --chain sepolia -vvvv'",
+    "deploy:nft:sepolia": "bash -c 'source .env && forge script DeployUsernameNft --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv'",
+    "update:registry:sepolia": "bash -c 'source .env && forge script UpdateProtocolRegistry --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv'",
     "fund:paymaster:sepolia": "bash -c 'source .env && forge script FundPaymasterOps --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv'",
     "lint:bulloak": "find test/unit -name '*.tree' | xargs bulloak check",
     "lint:check": "forge fmt --check && pnpm lint:sol",
