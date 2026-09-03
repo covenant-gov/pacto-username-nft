@@ -78,7 +78,7 @@ contract VerifyDeploy is Script {
 
     IUsernameSystemFactory factory = IUsernameSystemFactory(d.factory);
     IPactoProtocolRegistry registry = IPactoProtocolRegistry(d.registry);
-    require(factory.REGISTRY() == d.registry, 'verify: registry mismatch');
+    require(address(factory.REGISTRY()) == d.registry, 'verify: registry mismatch');
     require(factory.USERNAME_NFT() == d.nft, 'verify: NFT mismatch');
     require(factory.POOL() == d.pool, 'verify: pool mismatch');
     require(factory.BOOTSTRAP_POOL() == d.bootstrapPool, 'verify: bootstrap pool mismatch');

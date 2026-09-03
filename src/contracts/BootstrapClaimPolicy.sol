@@ -42,7 +42,6 @@ contract BootstrapClaimPolicy is ISponsorPolicy {
 
     if (!_usernameNft.canBootstrapClaim(member, _npubHash)) return false;
     if (!_usernameNft.nameAvailable(_name)) return false;
-    if (_usernameNft.isReservedName(keccak256(bytes(_name)))) return false;
     if (_nostrSignature.length != 64) return false;
 
     return true;

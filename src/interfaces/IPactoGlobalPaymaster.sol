@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
+
 /// @notice ERC-4337 paymaster for username NFT holders with modular action policy
 interface IPactoGlobalPaymaster {
   /// @notice Paymaster payload version
   function PAYMASTER_DATA_VERSION() external view returns (uint8 version);
 
   /// @notice Protocol registry used to resolve live NFT, pools, and policies
-  function REGISTRY() external view returns (address registry);
+  function REGISTRY() external view returns (IPactoProtocolRegistry registry);
 
   /// @notice Allowlisted EIP-7702 account implementation from the protocol registry
   function ALLOWED_7702_IMPLEMENTATION() external view returns (address implementation);

@@ -24,7 +24,7 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
   uint32 public constant MIN_UNSTAKE_DELAY_SEC = 1 days;
 
   /// @inheritdoc IUsernameSystemFactory
-  address public immutable REGISTRY;
+  IPactoProtocolRegistry public immutable REGISTRY;
 
   /// @inheritdoc IUsernameSystemFactory
   address public paymasterStaker;
@@ -37,7 +37,7 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
     if (entryPoint == IEntryPoint(address(0)) || owner == address(0)) revert Factory_ZeroAddress();
 
     PactoProtocolRegistry _registry = new PactoProtocolRegistry(owner, address(this));
-    REGISTRY = address(_registry);
+    REGISTRY = _registry;
 
     address _pool = address(new GlobalSponsorPool(_registry));
     address _nft = address(new PactoUsernameNFT(owner));
@@ -62,32 +62,32 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
 
   /// @inheritdoc IUsernameSystemFactory
   function USERNAME_NFT() public view returns (address usernameNft) {
-    usernameNft = IPactoProtocolRegistry(REGISTRY).usernameNft();
+    return REGISTRY.usernameNft();
   }
 
   /// @inheritdoc IUsernameSystemFactory
   function POOL() public view returns (address pool) {
-    pool = IPactoProtocolRegistry(REGISTRY).pool();
+    return REGISTRY.pool();
   }
 
   /// @inheritdoc IUsernameSystemFactory
   function BOOTSTRAP_POOL() public view returns (address bootstrapPool) {
-    bootstrapPool = IPactoProtocolRegistry(REGISTRY).bootstrapPool();
+    return REGISTRY.bootstrapPool();
   }
 
   /// @inheritdoc IUsernameSystemFactory
   function POLICY() public view returns (address policy) {
-    policy = IPactoProtocolRegistry(REGISTRY).policy();
+    return REGISTRY.policy();
   }
 
   /// @inheritdoc IUsernameSystemFactory
   function BOOTSTRAP_POLICY() public view returns (address bootstrapPolicy) {
-    bootstrapPolicy = IPactoProtocolRegistry(REGISTRY).bootstrapPolicy();
+    return REGISTRY.bootstrapPolicy();
   }
 
   /// @inheritdoc IUsernameSystemFactory
   function PAYMASTER() public view returns (address paymaster) {
-    paymaster = IPactoProtocolRegistry(REGISTRY).paymaster();
+    return REGISTRY.paymaster();
   }
 
   /// @inheritdoc IUsernameSystemFactory

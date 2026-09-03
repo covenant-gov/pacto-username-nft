@@ -22,9 +22,9 @@ contract UnitUsernameSystemFactory is Test {
   }
 
   function test_Constructor_WiresDeployedContracts() external view {
-    PactoProtocolRegistry _registry = PactoProtocolRegistry(_factory.REGISTRY());
+    PactoProtocolRegistry _registry = PactoProtocolRegistry(address(_factory.REGISTRY()));
 
-    assertTrue(_factory.REGISTRY() != address(0));
+    assertTrue(address(_factory.REGISTRY()) != address(0));
     assertTrue(_factory.USERNAME_NFT() != address(0));
     assertTrue(_factory.POOL() != address(0));
     assertTrue(_factory.BOOTSTRAP_POOL() != address(0));

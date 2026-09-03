@@ -18,8 +18,8 @@ contract BootstrapMintPool is IBootstrapMintPool {
   /// @inheritdoc IBootstrapMintPool
   mapping(address sponsor => uint256 shares) public sponsorShares;
 
-  /// @notice Storage-backed pool wei available for bootstrap mint sponsorship
-  uint256 internal _spendablePoolWei;
+  /// @inheritdoc IBootstrapMintPool
+  uint256 public spendablePoolWei;
 
   /// @notice Initializes the bootstrap mint pool
   /// @param registry The protocol registry
@@ -44,15 +44,10 @@ contract BootstrapMintPool is IBootstrapMintPool {
   }
 
   /// @inheritdoc IBootstrapMintPool
-  function spendablePoolWei() external view returns (uint256 amount) {
-    amount = _spendablePoolWei;
-  }
-
-  /// @inheritdoc IBootstrapMintPool
   function withdrawable(address sponsor) external view returns (uint256 amount) {
     uint256 _shares = sponsorShares[sponsor];
     if (_shares == 0 || totalShares == 0) return 0;
-    amount = (_shares * _spendablePoolWei) / totalShares;
+    amount = (_shares * spendablePoolWei) / totalShares;
   }
 
   /// @inheritdoc IBootstrapMintPool
@@ -71,12 +66,12 @@ contract BootstrapMintPool is IBootstrapMintPool {
     uint256 _shares = sponsorShares[msg.sender];
     if (_shares == 0) revert ISponsorCommon.Sponsor_NoShares();
 
-    uint256 _pool = _spendablePoolWei;
+    uint256 _pool = spendablePoolWei;
     uint256 _amount = (_shares * _pool) / totalShares;
 
     sponsorShares[msg.sender] = 0;
     totalShares -= _shares;
-    _spendablePoolWei = _pool - _amount;
+    spendablePoolWei = _pool - _amount;
 
     ETHTransfer.sendEth(msg.sender, _amount);
 
@@ -87,9 +82,9 @@ contract BootstrapMintPool is IBootstrapMintPool {
   function spendGas(uint256 amount) external {
     address _paymaster = paymaster();
     if (msg.sender != _paymaster) revert ISponsorCommon.Sponsor_NotPaymaster();
-    if (amount > _spendablePoolWei) revert ISponsorCommon.Sponsor_InsufficientBalance();
+    if (amount > spendablePoolWei) revert ISponsorCommon.Sponsor_InsufficientBalance();
 
-    _spendablePoolWei -= amount;
+    spendablePoolWei -= amount;
     ETHTransfer.sendEth(_paymaster, amount);
 
     emit GasSpent(msg.sender, amount);
@@ -101,7 +96,7 @@ contract BootstrapMintPool is IBootstrapMintPool {
     if (msg.value == 0) revert ISponsorCommon.Sponsor_ZeroAmount();
 
     uint256 _shares;
-    uint256 _balanceBefore = _spendablePoolWei;
+    uint256 _balanceBefore = spendablePoolWei;
 
     if (totalShares != 0 && _balanceBefore != 0) {
       _shares = (msg.value * totalShares) / _balanceBefore;
@@ -111,7 +106,7 @@ contract BootstrapMintPool is IBootstrapMintPool {
 
     sponsorShares[sponsor] += _shares;
     totalShares += _shares;
-    _spendablePoolWei = _balanceBefore + msg.value;
+    spendablePoolWei = _balanceBefore + msg.value;
 
     emit Deposited(sponsor, msg.value, _shares);
   }

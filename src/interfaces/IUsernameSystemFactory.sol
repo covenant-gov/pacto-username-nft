@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
+
 /// @notice Chain singleton that deploys the username sponsorship system
 interface IUsernameSystemFactory {
   /// @notice Minimum paymaster stake in wei
@@ -10,7 +12,7 @@ interface IUsernameSystemFactory {
   function MIN_UNSTAKE_DELAY_SEC() external view returns (uint32 minUnstakeDelaySec);
 
   /// @notice Protocol registry used as the live address book
-  function REGISTRY() external view returns (address registry);
+  function REGISTRY() external view returns (IPactoProtocolRegistry registry);
 
   /// @notice Live username NFT contract from the protocol registry
   function USERNAME_NFT() external view returns (address usernameNft);

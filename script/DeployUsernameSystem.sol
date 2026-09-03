@@ -40,7 +40,7 @@ contract DeployUsernameSystem is DeploymentArtifacts {
     FullSystemArtifact memory _artifact;
     _artifact.entryPoint = _config.entryPoint;
     _artifact.allowed7702Implementation = _allowed7702;
-    _artifact.protocolRegistry = _factory.REGISTRY();
+    _artifact.protocolRegistry = address(_factory.REGISTRY());
     _artifact.usernameSystemFactory = address(_factory);
     _artifact.pactoUsernameNft = _factory.USERNAME_NFT();
     _artifact.globalSponsorPool = _factory.POOL();
@@ -73,7 +73,7 @@ contract DeployUsernameSystem is DeploymentArtifacts {
     address nostrClaimLink
   ) internal view {
     console.log('UsernameSystemFactory:', address(_factory));
-    console.log('PactoProtocolRegistry:', _factory.REGISTRY());
+    console.log('PactoProtocolRegistry:', address(_factory.REGISTRY()));
     console.log('PactoUsernameNFT:', _factory.USERNAME_NFT());
     console.log('GlobalSponsorPool:', _factory.POOL());
     console.log('BootstrapMintPool:', _factory.BOOTSTRAP_POOL());
