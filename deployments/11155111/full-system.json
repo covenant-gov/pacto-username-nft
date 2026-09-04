@@ -1,15 +1,16 @@
 {
   "allowed7702Implementation": "0x33F920B5aF6c527f63BD6B24d58Dccd698b2DC60",
-  "bootstrapClaimPolicy": "0x3EAd3052aABc27f2e37FcA7C0d5D2Fe01FC6520d",
-  "bootstrapMintPool": "0x8187d8209307b73731A767B58487D302dB61f13f",
+  "bootstrapClaimPolicy": "0x2BAC17B2aE2aA068bEa3064A3553EDee5D60aB6e",
+  "bootstrapMintPool": "0x95d3B8B97C4ff48af010191E80CcAA9F55749A2B",
   "chainId": 11155111,
   "deployer": "0x897Aae53c0255b02EFF66bF2D623b19FA87e2d69",
   "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
-  "globalSponsorPool": "0x6713Cb2a0aaEFA0F53d55669D6CEF7D2dD570054",
+  "globalSponsorPool": "0x4EfeE104cF969bF70F342DFCd234f73A3bebEbeD",
   "nostrClaimLink": "0xCc0de30d2926995FB6458De7808E41E2a17B0e29",
-  "pactoGlobalPaymaster": "0x1C2eb4Ac1cD57aF67ad8B20838A28FB23d39d5b8",
-  "pactoUsernameNft": "0xa604Eb5Df00F23f12321c9eeBa0e92e9Ca4491f2",
+  "pactoGlobalPaymaster": "0x04Fc205adA4c0c5C5024546E87972C4c4bB30D0F",
+  "pactoUsernameNft": "0x99FEEDa477EEFE03AB70D7Eb64c26cC08Cd89587",
   "policyVersion": 3,
-  "sponsorPolicyRegistry": "0xf6583a6554b8e369249EaD33F3277baf4D94577f",
-  "usernameSystemFactory": "0x142f50bb42950158124EBa4491325deFF618e697"
+  "protocolRegistry": "0xAF61198bf3b9D8d49FA82888121c187720D6Cfe8",
+  "sponsorPolicyRegistry": "0xe72588cE03Fc96D61fc1Db1612202d7a4Ee78ECa",
+  "usernameSystemFactory": "0x83BEDd6Ef7FBe62a8aCe6521137e86670D1Fd2E3"
 }
