@@ -45,8 +45,12 @@ pnpm deploy:sepolia
 pnpm deploy:mainnet
 pnpm deploy:arbitrum
 
-# Re-verify from deployments/<chainId>/full-system.json (includes NostrClaimLink library)
+# Re-verify full stack from deployments/<chainId>/full-system.json (fresh DeployUsernameSystem only)
 pnpm verify:sepolia
+
+# After NFT / SPR pointer swaps: verify only those contracts (avoid verify:sepolia — live
+# registry/factory bytecode may lag Ownable2Step / NFT constructor source)
+pnpm verify:upgrades:sepolia
 
 # After a real deploy: EntryPoint deposit + paymaster stake (needs live full-system.json)
 pnpm fund:paymaster:sepolia

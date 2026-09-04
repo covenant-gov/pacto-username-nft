@@ -37,7 +37,8 @@
     "test:unit:deep": "FOUNDRY_FUZZ_RUNS=5000 pnpm test:unit",
     "verify:arbitrum": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url arbitrum --chain arbitrum -vvvv'",
     "verify:mainnet": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url mainnet --chain mainnet -vvvv'",
-    "verify:sepolia": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url sepolia --chain sepolia -vvvv'"
+    "verify:sepolia": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url sepolia --chain sepolia -vvvv'",
+    "verify:upgrades:sepolia": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyAlphaUpgrades --rpc-url sepolia --chain sepolia -vvvv'"
   },
   "lint-staged": {
     "*.{js,css,md,ts,sol}": "forge fmt",

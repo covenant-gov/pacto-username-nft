@@ -298,6 +298,7 @@ Optional SponsorPolicyRegistry swap (Ownable2Step; no full-system redeploy):
 ```bash
 pnpm deploy:policy:sepolia     # writes deployments/<chainId>/sponsor-policy-registry.json
 pnpm update:registry:sepolia   # points registry.policy at new SPR; reseeds rotation selectors when owner==deployer
+pnpm verify:upgrades:sepolia   # Etherscan: new NFT + SPR only (not full VerifyDeploy)
 ```
 
 Fund pools separately:
