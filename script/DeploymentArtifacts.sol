@@ -106,15 +106,13 @@ abstract contract DeploymentArtifacts is Script {
 
   /// @notice Writes a standalone username NFT deployment artifact
   /// @param pactoUsernameNft The newly deployed username NFT
-  /// @param owner The NFT owner
   /// @param deployer The deployer address
-  function _writeUsernameNftJson(address pactoUsernameNft, address owner, address deployer) internal {
+  function _writeUsernameNftJson(address pactoUsernameNft, address deployer) internal {
     if (!_shouldWriteDeploymentJson()) return;
 
     string memory _key = 'username_nft';
     vm.serializeUint(_key, 'chainId', block.chainid);
     vm.serializeAddress(_key, 'pactoUsernameNft', pactoUsernameNft);
-    vm.serializeAddress(_key, 'owner', owner);
     string memory _json = vm.serializeAddress(_key, 'deployer', deployer);
     _writeDeploymentJson(_json, 'username-nft.json');
   }

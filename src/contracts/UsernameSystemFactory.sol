@@ -40,7 +40,7 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
     REGISTRY = _registry;
 
     address _pool = address(new GlobalSponsorPool(_registry));
-    address _nft = address(new PactoUsernameNFT(owner));
+    address _nft = address(new PactoUsernameNFT());
     address _policy = address(new SponsorPolicyRegistry(owner));
     address _bootstrapPool = address(new BootstrapMintPool(_registry));
     address _bootstrapPolicy = address(new BootstrapClaimPolicy(_registry));

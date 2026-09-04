@@ -64,7 +64,7 @@ contract VerifyDeploy is Script {
     _verify(d.nostrClaimLink, _NOSTR_CLAIM_LINK, chain, new bytes(0), '');
     _verify(d.registry, _REGISTRY, chain, abi.encode(d.owner, d.factory), '');
     _verify(d.factory, _FACTORY, chain, abi.encode(IEntryPoint(d.entryPoint), d.owner, d.allowed7702), libFlag);
-    _verify(d.nft, _NFT, chain, abi.encode(d.owner), libFlag);
+    _verify(d.nft, _NFT, chain, new bytes(0), libFlag);
     _verify(d.pool, _POOL, chain, abi.encode(IPactoProtocolRegistry(d.registry)), '');
     _verify(d.bootstrapPool, _BOOTSTRAP_POOL, chain, abi.encode(IPactoProtocolRegistry(d.registry)), '');
     _verify(d.policy, _POLICY, chain, abi.encode(d.owner), '');

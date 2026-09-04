@@ -66,7 +66,7 @@ contract IntegrationSponsoredBootstrapClaim is IntegrationBase {
   }
 
   function test_SponsoredBootstrapClaim_WhenExecuteTargetIsNotRegistryNft() external {
-    PactoUsernameNFT _otherNft = new PactoUsernameNFT(owner);
+    PactoUsernameNFT _otherNft = new PactoUsernameNFT();
     PackedUserOperation memory _userOp =
       buildUserOp(claimer, address(_otherNft), claimCalldata(USERNAME, NPUB_HASH, NOSTR_SIGNATURE), 0);
     _userOp.paymasterAndData = buildPaymasterData(NPUB_HASH, claimer, address(0));

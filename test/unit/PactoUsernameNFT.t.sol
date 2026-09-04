@@ -13,7 +13,6 @@ contract UnitPactoUsernameNFT is Test {
   uint256 internal constant _OTHER_PK = 0xB0B;
   uint256 internal constant _PENDING_PK = 0xC0FFEE;
 
-  address internal _owner;
   address internal _claimer;
   address internal _other;
   address internal _pending;
@@ -31,15 +30,13 @@ contract UnitPactoUsernameNFT is Test {
   PactoUsernameNFT internal _nft;
 
   function setUp() external {
-    _owner = makeAddr('owner');
     _claimer = vm.addr(_CLAIMER_PK);
     _other = vm.addr(_OTHER_PK);
     _pending = vm.addr(_PENDING_PK);
 
     vm.warp(_ISSUED_AT);
 
-    vm.prank(_owner);
-    _nft = new PactoUsernameNFT(_owner);
+    _nft = new PactoUsernameNFT();
 
     assertEq(_claimer, 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7);
   }
@@ -66,11 +63,10 @@ contract UnitPactoUsernameNFT is Test {
     uint256 _issuedAt,
     bytes32 _salt,
     bytes memory _nostrSignature,
-    bytes memory _evmSignature,
-    uint256 _value
+    bytes memory _evmSignature
   ) internal {
     vm.prank(_caller);
-    _nft.claim{value: _value}(_name, _npubHash, _pubkey, _nonce, _issuedAt, _salt, _nostrSignature, _evmSignature);
+    _nft.claim(_name, _npubHash, _pubkey, _nonce, _issuedAt, _salt, _nostrSignature, _evmSignature);
   }
 
   function _defaultClaim(
@@ -78,8 +74,7 @@ contract UnitPactoUsernameNFT is Test {
     string memory _name,
     bytes32 _npubHash,
     bytes32 _pubkey,
-    uint256 _nonce,
-    uint256 _value
+    uint256 _nonce
   ) internal {
     _claim(
       _caller,
@@ -90,13 +85,12 @@ contract UnitPactoUsernameNFT is Test {
       _ISSUED_AT,
       _SALT,
       _NOSTR_SIGNATURE,
-      _claimSignature(_caller, _name, _npubHash, _nonce, _ISSUED_AT, _SALT),
-      _value
+      _claimSignature(_caller, _name, _npubHash, _nonce, _ISSUED_AT, _SALT)
     );
   }
 
   modifier givenClaimedUsername() {
-    _defaultClaim(_claimer, _NAME, _NPUB_HASH, _PUBKEY, 1, 0);
+    _defaultClaim(_claimer, _NAME, _NPUB_HASH, _PUBKEY, 1);
     _;
   }
 
@@ -106,7 +100,7 @@ contract UnitPactoUsernameNFT is Test {
     vm.expectEmit(true, true, true, true, address(_nft));
     emit IPactoUsernameNFT.UsernameClaimed(_NPUB_HASH, _NAME, _claimer, 1);
 
-    _claim(_claimer, _NAME, _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature, 0);
+    _claim(_claimer, _NAME, _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
 
     IPactoUsernameNFT.UsernameRecord memory _record = _nft.recordOf(_NPUB_HASH);
     assertEq(_record.name, _NAME);
@@ -131,24 +125,6 @@ contract UnitPactoUsernameNFT is Test {
     assertTrue(_nft.nameAvailable('user-1'));
   }
 
-  function test_NameAvailable_WhenTheNameIsReserved() external {
-    vm.prank(_owner);
-    _nft.setReservedName(keccak256(bytes(_NAME)), true);
-
-    assertFalse(_nft.nameAvailable(_NAME));
-  }
-
-  function test_Claim_WhenTheNameIsReserved() external {
-    vm.prank(_owner);
-    _nft.setReservedName(keccak256(bytes(_NAME)), true);
-
-    bytes memory _evmSignature = _claimSignature(_claimer, _NAME, _NPUB_HASH, 1, _ISSUED_AT, _SALT);
-
-    vm.expectRevert(IPactoUsernameNFT.PactoUsernameNFT_NameUnavailable.selector);
-    vm.prank(_claimer);
-    _nft.claim(_NAME, _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
-  }
-
   function test_Claim_WhenTheNameIsAlreadyClaimed() external givenClaimedUsername {
     bytes memory _evmSignature = _signForOther(_NAME, _OTHER_NPUB_HASH, 1, _ISSUED_AT);
 
@@ -171,17 +147,6 @@ contract UnitPactoUsernameNFT is Test {
     vm.expectRevert(IPactoUsernameNFT.PactoUsernameNFT_AddressAlreadyClaimed.selector);
     vm.prank(_claimer);
     _nft.claim('othername', _OTHER_NPUB_HASH, _PUBKEY, 2, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
-  }
-
-  function test_Claim_WhenTheMintFeeIsNotPaid() external {
-    vm.prank(_owner);
-    _nft.setMintFee(1 ether);
-
-    bytes memory _evmSignature = _claimSignature(_claimer, _NAME, _NPUB_HASH, 1, _ISSUED_AT, _SALT);
-
-    vm.expectRevert(IPactoUsernameNFT.PactoUsernameNFT_InsufficientMintFee.selector);
-    vm.prank(_claimer);
-    _nft.claim(_NAME, _NPUB_HASH, _PUBKEY, 1, _ISSUED_AT, _SALT, _NOSTR_SIGNATURE, _evmSignature);
   }
 
   function test_Claim_WhenTheEvmSignatureIsInvalid() external {
@@ -313,25 +278,6 @@ contract UnitPactoUsernameNFT is Test {
     vm.expectRevert(IPactoUsernameNFT.PactoUsernameNFT_TransferDisabled.selector);
     vm.prank(_claimer);
     _nft.transferFrom(_claimer, _other, 1);
-  }
-
-  function test_SetMintFee_WhenCalledByOwner() external {
-    vm.prank(_owner);
-    vm.expectEmit(true, true, true, true, address(_nft));
-    emit IPactoUsernameNFT.MintFeeUpdated(0.01 ether);
-    _nft.setMintFee(0.01 ether);
-    assertEq(_nft.mintFee(), 0.01 ether);
-  }
-
-  function test_Claim_WhenMintFeeIsPaid() external {
-    vm.prank(_owner);
-    _nft.setMintFee(0.01 ether);
-
-    vm.deal(_claimer, 0.01 ether);
-
-    _defaultClaim(_claimer, _NAME, _NPUB_HASH, _PUBKEY, 1, 0.01 ether);
-
-    assertEq(_nft.ownerOf(1), _claimer);
   }
 
   function _signForOther(

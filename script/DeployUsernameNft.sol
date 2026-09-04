@@ -5,7 +5,6 @@ import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 
 import {DeploymentArtifacts} from 'script/DeploymentArtifacts.sol';
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {stdJson} from 'forge-std/StdJson.sol';
 import {console} from 'forge-std/console.sol';
 
@@ -23,24 +22,17 @@ contract DeployUsernameNft is DeploymentArtifacts {
     }
 
     address _registry = _json.readAddress('.protocolRegistry');
-    address _owner = Ownable(_registry).owner();
-    address _scriptOwner = vm.envOr('PROTOCOL_OWNER', address(0));
 
     vm.startBroadcast();
     address _deployer = _broadcastDeployer();
-    if (_scriptOwner == address(0)) _scriptOwner = _deployer;
-    // Prefer the live registry owner so the NFT admin matches protocol ownership
-    address _nftOwner = _owner == address(0) ? _scriptOwner : _owner;
-
-    PactoUsernameNFT _nft = new PactoUsernameNFT(_nftOwner);
+    PactoUsernameNFT _nft = new PactoUsernameNFT();
     vm.stopBroadcast();
 
     console.log('PactoProtocolRegistry:', _registry);
     console.log('PactoUsernameNFT:', address(_nft));
-    console.log('NFT owner:', _nftOwner);
     console.log('Deployer:', _deployer);
 
-    _writeUsernameNftJson(address(_nft), _nftOwner, _deployer);
+    _writeUsernameNftJson(address(_nft), _deployer);
   }
 
   /// @notice Returns the forge script broadcaster address

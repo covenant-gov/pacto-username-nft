@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import {EIP712} from '@openzeppelin/contracts/utils/cryptography/EIP712.sol';
@@ -10,7 +9,7 @@ import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
 
 /// @title PactoUsernameNFT
 /// @notice ERC-721 username credentials keyed by npub with two-step EVM address rotation
-contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
+contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712 {
   using ECDSA for bytes32;
 
   /// @inheritdoc IPactoUsernameNFT
@@ -23,9 +22,6 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
   bytes32 public constant CLAIM_BINDING_TYPEHASH = keccak256(
     'ClaimBinding(bytes32 npubHash,address evmAddress,string name,uint256 nonce,uint256 issuedAt,bytes32 salt)'
   );
-
-  /// @inheritdoc IPactoUsernameNFT
-  uint256 public mintFee;
 
   /// @notice Consumed claim nonce per npub hash
   mapping(bytes32 npubHash => uint256 nonce) public usedNonce;
@@ -42,9 +38,6 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
   /// @notice Token id to npub hash mapping
   mapping(uint256 tokenId => bytes32 npubHash) internal _tokenToNpub;
 
-  /// @notice Reserved name hashes blocked from claim
-  mapping(bytes32 nameHash => bool reserved) internal _reservedNames;
-
   /// @notice Next sequential ERC-721 token id
   uint256 internal _nextTokenId = 1;
 
@@ -52,12 +45,11 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
   bool internal _internalTransfer;
 
   /// @notice Initializes the username NFT collection
-  /// @param _owner The protocol owner for admin functions
-  constructor(address _owner) ERC721('Pacto Username', 'PACTO-NAME') EIP712('PactoUsername', '2') Ownable(_owner) {}
+  constructor() ERC721('Pacto Username', 'PACTO-NAME') EIP712('PactoUsername', '2') {}
 
   /// @inheritdoc IPactoUsernameNFT
   function nameAvailable(string calldata _name) external view returns (bool available) {
-    return _nameToNpub[_name] == bytes32(0) && !_reservedNames[keccak256(bytes(_name))];
+    return _nameToNpub[_name] == bytes32(0);
   }
 
   /// @inheritdoc IPactoUsernameNFT
@@ -95,13 +87,6 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     return true;
   }
 
-  /// @notice Returns whether a name hash is reserved
-  /// @param _nameHash The keccak256 hash of the username bytes
-  /// @return reserved True when the name is reserved
-  function isReservedName(bytes32 _nameHash) external view returns (bool reserved) {
-    return _reservedNames[_nameHash];
-  }
-
   /// @inheritdoc IPactoUsernameNFT
   function hashClaimBinding(
     bytes32 _npubHash,
@@ -124,8 +109,7 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     bytes32 _salt,
     bytes calldata _nostrSignature,
     bytes calldata _evmSignature
-  ) external payable {
-    if (msg.value < mintFee) revert PactoUsernameNFT_InsufficientMintFee();
+  ) external {
     _validateClaimInputs(_name, _npubHash, _pubkey, _nonce, _issuedAt);
 
     if (!NostrClaimLink.isNostrClaimSignatureValid(
@@ -197,19 +181,6 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     emit AddressTransferCancelled(_npubHash, msg.sender);
   }
 
-  /// @inheritdoc IPactoUsernameNFT
-  function setMintFee(uint256 _mintFee) external onlyOwner {
-    mintFee = _mintFee;
-    emit MintFeeUpdated(_mintFee);
-  }
-
-  /// @notice Sets whether a name hash is reserved
-  /// @param _nameHash The keccak256 hash of the username bytes
-  /// @param _reserved True to reserve the name
-  function setReservedName(bytes32 _nameHash, bool _reserved) external onlyOwner {
-    _reservedNames[_nameHash] = _reserved;
-  }
-
   /// @notice Validates claim availability, binding freshness, and npub binding
   function _validateClaimInputs(
     string calldata _name,
@@ -219,9 +190,7 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712, Ownable {
     uint256 _issuedAt
   ) internal view {
     if (_npubHash == bytes32(0) || _pubkey == bytes32(0)) revert PactoUsernameNFT_InvalidName();
-    if (_nameToNpub[_name] != bytes32(0) || _reservedNames[keccak256(bytes(_name))]) {
-      revert PactoUsernameNFT_NameUnavailable();
-    }
+    if (_nameToNpub[_name] != bytes32(0)) revert PactoUsernameNFT_NameUnavailable();
     if (_records[_npubHash].tokenId != 0) revert PactoUsernameNFT_NpubAlreadyClaimed();
     if (_addressToNpub[msg.sender] != bytes32(0)) revert PactoUsernameNFT_AddressAlreadyClaimed();
     if (_npubHash != NostrClaimLink.npubHashFromPubkey(_pubkey)) revert PactoUsernameNFT_InvalidNpubHash();

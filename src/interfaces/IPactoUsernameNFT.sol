@@ -27,13 +27,10 @@ interface IPactoUsernameNFT {
   /// @notice Emitted when a pending address transfer is cancelled
   event AddressTransferCancelled(bytes32 indexed npubHash, address indexed evmAddress);
 
-  /// @notice Emitted when the mint fee is updated
-  event MintFeeUpdated(uint256 mintFee);
-
   /// @notice Thrown when npubHash or pubkey is zero
   error PactoUsernameNFT_InvalidName();
 
-  /// @notice Thrown when a name is reserved or already claimed
+  /// @notice Thrown when a name is already claimed
   error PactoUsernameNFT_NameUnavailable();
 
   /// @notice Thrown when an npub already has a record
@@ -41,9 +38,6 @@ interface IPactoUsernameNFT {
 
   /// @notice Thrown when an EVM address already controls a record
   error PactoUsernameNFT_AddressAlreadyClaimed();
-
-  /// @notice Thrown when the mint fee is not paid
-  error PactoUsernameNFT_InsufficientMintFee();
 
   /// @notice Thrown when an EIP-712 claim signature is invalid
   error PactoUsernameNFT_InvalidClaimSignature();
@@ -84,18 +78,10 @@ interface IPactoUsernameNFT {
   /// @notice Thrown when a transfer target equals the active controller
   error PactoUsernameNFT_InvalidTransferTarget();
 
-  /// @notice Returns the fee required to claim a username
-  function mintFee() external view returns (uint256 fee);
-
   /// @notice Returns whether a name can be claimed
   /// @param _name The candidate username
-  /// @return available True when the name is unclaimed and not reserved
+  /// @return available True when the name is unclaimed
   function nameAvailable(string calldata _name) external view returns (bool available);
-
-  /// @notice Returns whether a name hash is reserved
-  /// @param nameHash The keccak256 hash of the username bytes
-  /// @return reserved True when the name is reserved
-  function isReservedName(bytes32 nameHash) external view returns (bool reserved);
 
   /// @notice Returns the npub hash for an active EVM controller
   /// @param _evmAddress The EVM address to lookup
@@ -170,7 +156,7 @@ interface IPactoUsernameNFT {
     bytes32 salt,
     bytes calldata nostrSignature,
     bytes calldata evmSignature
-  ) external payable;
+  ) external;
 
   /// @notice Initiates a two-step transfer of the active EVM controller
   /// @param _npubHash The npub hash for the record
@@ -184,8 +170,4 @@ interface IPactoUsernameNFT {
   /// @notice Cancels a pending EVM controller transfer
   /// @param _npubHash The npub hash for the record
   function cancelAddressTransfer(bytes32 _npubHash) external;
-
-  /// @notice Updates the mint fee
-  /// @param _mintFee The new mint fee in wei
-  function setMintFee(uint256 _mintFee) external;
 }
