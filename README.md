@@ -54,6 +54,22 @@ pnpm fund:paymaster:sepolia
 # Alpha: deploy a replacement NFT, then point the protocol registry at it
 pnpm deploy:nft:sepolia
 pnpm update:registry:sepolia
+
+# UN-1 (AA epic): set Allowed7702 from deployments/<chainId>/eip7702-account.json
+# Do NOT run full-system deploy — keep live protocolRegistry for squad SS-3
+pnpm update:registry:sepolia
+
+# Optional: Ownable2Step SponsorPolicyRegistry swap (no full redeploy)
+pnpm deploy:policy:sepolia
+pnpm update:registry:sepolia   # POLICY from sponsor-policy-registry.json; reseeds rotation selectors
+```
+
+Verify EIP-7702 allowlist after UN-1:
+
+```bash
+cast call $PROTOCOL_REGISTRY 'allowed7702Implementation()(address)' --rpc-url $SEPOLIA_RPC
+cast call $GLOBAL_PM 'ALLOWED_7702_IMPLEMENTATION()(address)' --rpc-url $SEPOLIA_RPC
+# both == 0x2E9156deE65d7946305C334824e2648Ff9128f45
 ```
 
 Fund the global sponsor pool:

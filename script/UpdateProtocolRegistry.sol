@@ -26,8 +26,8 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
   /// @param policy Replacement member policy registry address (zero skips)
   /// @param bootstrapPolicy Replacement bootstrap claim policy address (zero skips)
   /// @param entryPoint Replacement EntryPoint address (zero skips)
-  /// @param allowed7702 Replacement EIP-7702 allowlist address when has7702Env
-  /// @param has7702Env Whether an EIP-7702 allowlist update was supplied
+  /// @param allowed7702 Replacement EIP-7702 allowlist address when has7702Update
+  /// @param has7702Update Whether an EIP-7702 allowlist update was supplied
   struct RegistryUpdates {
     address usernameNft;
     address paymaster;
@@ -37,7 +37,7 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     address bootstrapPolicy;
     address entryPoint;
     address allowed7702;
-    bool has7702Env;
+    bool has7702Update;
   }
 
   function run() external {
@@ -65,17 +65,16 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     }
   }
 
-  /// @notice Loads optional update addresses from env and username-nft.json
+  /// @notice Loads optional update addresses from env and local deployment artifacts
   function _loadUpdates() internal view returns (RegistryUpdates memory updates) {
     updates.usernameNft = _resolveUsernameNft();
     updates.paymaster = vm.envOr('PAYMASTER', address(0));
     updates.pool = vm.envOr('POOL', address(0));
     updates.bootstrapPool = vm.envOr('BOOTSTRAP_POOL', address(0));
-    updates.policy = vm.envOr('POLICY', address(0));
+    updates.policy = _resolvePolicy();
     updates.bootstrapPolicy = vm.envOr('BOOTSTRAP_POLICY', address(0));
     updates.entryPoint = vm.envOr('ENTRY_POINT', address(0));
-    updates.has7702Env = vm.envExists('ALLOWED_7702');
-    if (updates.has7702Env) updates.allowed7702 = vm.envAddress('ALLOWED_7702');
+    (updates.allowed7702, updates.has7702Update) = _resolveAllowed7702Update();
   }
 
   /// @notice Reverts when no registry update was requested
@@ -83,7 +82,7 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     require(
       updates.usernameNft != address(0) || updates.paymaster != address(0) || updates.pool != address(0)
         || updates.bootstrapPool != address(0) || updates.policy != address(0) || updates.bootstrapPolicy != address(0)
-        || updates.entryPoint != address(0) || updates.has7702Env,
+        || updates.entryPoint != address(0) || updates.has7702Update,
       'update: no registry changes'
     );
   }
@@ -104,14 +103,19 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     if (updates.bootstrapPool != address(0)) {
       registry.set(IPactoProtocolRegistry.ProtocolComponent.BootstrapPool, updates.bootstrapPool);
     }
-    if (updates.policy != address(0)) registry.set(IPactoProtocolRegistry.ProtocolComponent.Policy, updates.policy);
+    if (updates.policy != address(0) && updates.policy != registry.policy()) {
+      registry.set(IPactoProtocolRegistry.ProtocolComponent.Policy, updates.policy);
+      if (deployer == registry.owner()) {
+        _seedMemberPolicySelectors(SponsorPolicyRegistry(updates.policy), registry.usernameNft());
+      }
+    }
     if (updates.bootstrapPolicy != address(0)) {
       registry.set(IPactoProtocolRegistry.ProtocolComponent.BootstrapPolicy, updates.bootstrapPolicy);
     }
     if (updates.entryPoint != address(0)) {
       registry.set(IPactoProtocolRegistry.ProtocolComponent.EntryPoint, updates.entryPoint);
     }
-    if (updates.has7702Env) {
+    if (updates.has7702Update) {
       registry.set(IPactoProtocolRegistry.ProtocolComponent.Allowed7702Implementation, updates.allowed7702);
     }
   }
@@ -163,6 +167,37 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     }
   }
 
+  /// @notice Resolves the replacement member policy from env or sponsor-policy-registry.json
+  function _resolvePolicy() internal view returns (address policy) {
+    policy = vm.envOr('POLICY', address(0));
+    if (policy != address(0)) return policy;
+
+    try vm.readFile(_deploymentJsonPath('sponsor-policy-registry.json')) returns (string memory policyJson) {
+      policy = policyJson.readAddress('.sponsorPolicyRegistry');
+    } catch {
+      policy = address(0);
+    }
+  }
+
+  /// @notice Resolves Allowed7702 from ALLOWED_7702 env or eip7702-account.json
+  /// @return allowed7702 The allowlist address (may be zero when clearing via env)
+  /// @return hasUpdate True when an update should be applied
+  function _resolveAllowed7702Update() internal view returns (address allowed7702, bool hasUpdate) {
+    if (vm.envExists('ALLOWED_7702')) {
+      return (vm.envAddress('ALLOWED_7702'), true);
+    }
+    allowed7702 = _readPactoSimple7702FromArtifact();
+    if (allowed7702 != address(0)) return (allowed7702, true);
+    return (address(0), false);
+  }
+
+  /// @notice Registers member-path username NFT rotation selectors on a policy registry
+  function _seedMemberPolicySelectors(SponsorPolicyRegistry policy, address usernameNft) internal {
+    policy.registerSelector(usernameNft, _INITIATE_ADDRESS_TRANSFER_SELECTOR);
+    policy.registerSelector(usernameNft, _CLAIM_ADDRESS_TRANSFER_SELECTOR);
+    policy.registerSelector(usernameNft, _CANCEL_ADDRESS_TRANSFER_SELECTOR);
+  }
+
   /// @notice Migrates member-path NFT rotation selectors from old NFT to new NFT
   function _migrateMemberPolicySelectors(SponsorPolicyRegistry policy, address oldNft, address newNft) internal {
     if (oldNft != address(0)) {
@@ -170,9 +205,7 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
       policy.deregisterSelector(oldNft, _CLAIM_ADDRESS_TRANSFER_SELECTOR);
       policy.deregisterSelector(oldNft, _CANCEL_ADDRESS_TRANSFER_SELECTOR);
     }
-    policy.registerSelector(newNft, _INITIATE_ADDRESS_TRANSFER_SELECTOR);
-    policy.registerSelector(newNft, _CLAIM_ADDRESS_TRANSFER_SELECTOR);
-    policy.registerSelector(newNft, _CANCEL_ADDRESS_TRANSFER_SELECTOR);
+    _seedMemberPolicySelectors(policy, newNft);
   }
 
   function _resolveNostrClaimLink(string memory json) internal view returns (address link) {
