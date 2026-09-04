@@ -2,11 +2,12 @@
 pragma solidity 0.8.30;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {Ownable2Step} from '@openzeppelin/contracts/access/Ownable2Step.sol';
 import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 
 /// @title SponsorPolicyRegistry
 /// @notice Deny-by-default allowlist of sponsorable targets and selectors
-contract SponsorPolicyRegistry is ISponsorPolicy, Ownable {
+contract SponsorPolicyRegistry is ISponsorPolicy, Ownable2Step {
   /// @notice Emitted when a target is registered for contract-wide sponsorship
   event TargetRegistered(address indexed target);
 

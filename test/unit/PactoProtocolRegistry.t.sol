@@ -122,6 +122,26 @@ contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
     assertEq(_registry.allowed7702Implementation(), address(0));
   }
 
+  function test_TransferOwnership_TwoStep() external {
+    address _newOwner = makeAddr('newOwner');
+
+    vm.prank(_owner);
+    _registry.transferOwnership(_newOwner);
+
+    assertEq(_registry.owner(), _owner);
+    assertEq(_registry.pendingOwner(), _newOwner);
+
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _other));
+    vm.prank(_other);
+    _registry.acceptOwnership();
+
+    vm.prank(_newOwner);
+    _registry.acceptOwnership();
+
+    assertEq(_registry.owner(), _newOwner);
+    assertEq(_registry.pendingOwner(), address(0));
+  }
+
   function _sampleAddresses() internal pure returns (IPactoProtocolRegistry.ProtocolAddresses memory addresses) {
     addresses = IPactoProtocolRegistry.ProtocolAddresses({
       usernameNft: address(0xA11),
