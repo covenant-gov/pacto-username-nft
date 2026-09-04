@@ -49,7 +49,7 @@ contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
     _registry = new PactoProtocolRegistry(_owner, address(this));
     _pool = new GlobalSponsorPool(_registry);
     _bootstrapPool = new BootstrapMintPool(_registry);
-    _nft = new PactoUsernameNFT(_owner);
+    _nft = new PactoUsernameNFT();
     _policy = new SponsorPolicyRegistry(_owner);
     _bootstrapPolicy = new BootstrapClaimPolicy(_registry);
 
@@ -153,7 +153,7 @@ contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
   }
 
   function test_ExposedValidate_WhenBootstrapTargetIsNotRegistryNft() external {
-    PactoUsernameNFT _otherNft = new PactoUsernameNFT(_owner);
+    PactoUsernameNFT _otherNft = new PactoUsernameNFT();
     bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
     PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_otherNft), _innerCallData, 0);
     _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));

@@ -2,11 +2,12 @@
 pragma solidity 0.8.30;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {Ownable2Step} from '@openzeppelin/contracts/access/Ownable2Step.sol';
 import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 
 /// @title PactoProtocolRegistry
 /// @notice Owner-gated protocol address book with a one-time installer initialize
-contract PactoProtocolRegistry is IPactoProtocolRegistry, Ownable {
+contract PactoProtocolRegistry is IPactoProtocolRegistry, Ownable2Step {
   /// @inheritdoc IPactoProtocolRegistry
   address public immutable INSTALLER;
 

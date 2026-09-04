@@ -283,6 +283,24 @@ Alpha NFT upgrade (no claim migration):
 pnpm deploy:nft:sepolia        # writes deployments/<chainId>/username-nft.json
 pnpm update:registry:sepolia   # points registry at new NFT; reseeds rotation selectors when owner==deployer
 ```
+
+EIP-7702 allowlist (UN-1 / [pacto-aa#1](https://github.com/covenant-gov/pacto-aa/issues/1)):
+
+```bash
+# Place pacto-aa deployments/11155111/eip7702-account.json under deployments/<chainId>/
+# (vendored in-repo for Sepolia: 0x2E9156deE65d7946305C334824e2648Ff9128f45)
+pnpm update:registry:sepolia   # sets Allowed7702 from artifact (or ALLOWED_7702 env)
+# Do NOT pnpm deploy:sepolia — live protocolRegistry must stay for squad SS-3
+```
+
+Optional SponsorPolicyRegistry swap (Ownable2Step; no full-system redeploy):
+
+```bash
+pnpm deploy:policy:sepolia     # writes deployments/<chainId>/sponsor-policy-registry.json
+pnpm update:registry:sepolia   # points registry.policy at new SPR; reseeds rotation selectors when owner==deployer
+pnpm verify:upgrades:sepolia   # Etherscan: new NFT + SPR only (not full VerifyDeploy)
+```
+
 Fund pools separately:
 
 ```bash

@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
+import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
+import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 
 import {DeploymentArtifacts} from 'script/DeploymentArtifacts.sol';
 
 import {stdJson} from 'forge-std/StdJson.sol';
 import {console} from 'forge-std/console.sol';
 
-/// @notice Deploys a replacement PactoUsernameNFT for alpha registry upgrades
-contract DeployUsernameNft is DeploymentArtifacts {
+/// @notice Deploys a replacement SponsorPolicyRegistry for alpha registry upgrades
+contract DeploySponsorPolicyRegistry is DeploymentArtifacts {
   using stdJson for string;
 
   function run() external {
@@ -22,17 +23,19 @@ contract DeployUsernameNft is DeploymentArtifacts {
     }
 
     address _registry = _json.readAddress('.protocolRegistry');
+    address _owner = vm.envOr('PROTOCOL_OWNER', PactoProtocolRegistry(_registry).owner());
 
     vm.startBroadcast();
     address _deployer = _broadcastDeployer();
-    PactoUsernameNFT _nft = new PactoUsernameNFT();
+    SponsorPolicyRegistry _policy = new SponsorPolicyRegistry(_owner);
     vm.stopBroadcast();
 
     console.log('PactoProtocolRegistry:', _registry);
-    console.log('PactoUsernameNFT:', address(_nft));
+    console.log('SponsorPolicyRegistry:', address(_policy));
+    console.log('Owner:', _owner);
     console.log('Deployer:', _deployer);
 
-    _writeUsernameNftJson(address(_nft), _deployer);
+    _writeSponsorPolicyRegistryJson(address(_policy), _deployer);
   }
 
   /// @notice Returns the forge script broadcaster address

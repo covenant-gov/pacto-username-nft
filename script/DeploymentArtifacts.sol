@@ -22,7 +22,7 @@ abstract contract DeploymentArtifacts is Script {
     path = string.concat('deployments/', vm.toString(block.chainid), '/', filename);
   }
 
-  /// @notice Reads pactoSimple7702Account from pacto-squad-sponsor eip7702 artifact when present locally
+  /// @notice Reads pactoSimple7702Account from pacto-aa eip7702 artifact when present locally
   /// @return account The allowlisted 7702 account or zero
   function _readPactoSimple7702FromArtifact() internal view returns (address account) {
     try vm.readFile(_deploymentJsonPath('eip7702-account.json')) returns (string memory json) {
@@ -106,17 +106,28 @@ abstract contract DeploymentArtifacts is Script {
 
   /// @notice Writes a standalone username NFT deployment artifact
   /// @param pactoUsernameNft The newly deployed username NFT
-  /// @param owner The NFT owner
   /// @param deployer The deployer address
-  function _writeUsernameNftJson(address pactoUsernameNft, address owner, address deployer) internal {
+  function _writeUsernameNftJson(address pactoUsernameNft, address deployer) internal {
     if (!_shouldWriteDeploymentJson()) return;
 
     string memory _key = 'username_nft';
     vm.serializeUint(_key, 'chainId', block.chainid);
     vm.serializeAddress(_key, 'pactoUsernameNft', pactoUsernameNft);
-    vm.serializeAddress(_key, 'owner', owner);
     string memory _json = vm.serializeAddress(_key, 'deployer', deployer);
     _writeDeploymentJson(_json, 'username-nft.json');
+  }
+
+  /// @notice Writes a standalone sponsor policy registry deployment artifact
+  /// @param sponsorPolicyRegistry The newly deployed policy registry
+  /// @param deployer The deployer address
+  function _writeSponsorPolicyRegistryJson(address sponsorPolicyRegistry, address deployer) internal {
+    if (!_shouldWriteDeploymentJson()) return;
+
+    string memory _key = 'sponsor_policy_registry';
+    vm.serializeUint(_key, 'chainId', block.chainid);
+    vm.serializeAddress(_key, 'sponsorPolicyRegistry', sponsorPolicyRegistry);
+    string memory _json = vm.serializeAddress(_key, 'deployer', deployer);
+    _writeDeploymentJson(_json, 'sponsor-policy-registry.json');
   }
 
   /// @notice Reads NostrClaimLink from forge broadcast libraries after deploy

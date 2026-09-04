@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 import {Test} from 'forge-std/Test.sol';
 
 contract UnitSponsorPolicyRegistry is Test {
   address internal _owner = makeAddr('owner');
+  address internal _other = makeAddr('other');
   address internal _target = makeAddr('target');
 
   SponsorPolicyRegistry internal _policy;
@@ -33,5 +35,25 @@ contract UnitSponsorPolicyRegistry is Test {
 
   function test_IsSponsorable_WhenNothingIsRegistered() external view {
     assertFalse(_policy.isSponsorable(_target, hex'12345678', address(0), 0));
+  }
+
+  function test_TransferOwnership_TwoStep() external {
+    address _newOwner = makeAddr('newOwner');
+
+    vm.prank(_owner);
+    _policy.transferOwnership(_newOwner);
+
+    assertEq(_policy.owner(), _owner);
+    assertEq(_policy.pendingOwner(), _newOwner);
+
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _other));
+    vm.prank(_other);
+    _policy.acceptOwnership();
+
+    vm.prank(_newOwner);
+    _policy.acceptOwnership();
+
+    assertEq(_policy.owner(), _newOwner);
+    assertEq(_policy.pendingOwner(), address(0));
   }
 }

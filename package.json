@@ -17,6 +17,7 @@
     "deploy:mainnet": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url mainnet --account $MAINNET_DEPLOYER_NAME --broadcast --chain mainnet -vvvvv && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url mainnet --chain mainnet -vvvv'",
     "deploy:sepolia": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url sepolia --chain sepolia -vvvv'",
     "deploy:nft:sepolia": "bash -c 'source .env && forge script DeployUsernameNft --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv'",
+    "deploy:policy:sepolia": "bash -c 'source .env && forge script DeploySponsorPolicyRegistry --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv'",
     "update:registry:sepolia": "bash -c 'source .env && forge script UpdateProtocolRegistry --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv'",
     "fund:paymaster:sepolia": "bash -c 'source .env && forge script FundPaymasterOps --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --broadcast --chain sepolia -vvvvv'",
     "lint:bulloak": "find test/unit -name '*.tree' | xargs bulloak check",
@@ -25,6 +26,7 @@
     "lint:natspec": "lintspec",
     "lint:sol": "solhint 'src/**/*.sol' 'script/**/*.sol' 'test/**/*.sol'",
     "prepare": "husky",
+    "simulate-deploy:policy:sepolia": "bash -c 'source .env && forge script DeploySponsorPolicyRegistry --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --chain sepolia -vvvvv'",
     "simulate-deploy:sepolia": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --chain sepolia -vvvvv'",
     "simulate-fund:paymaster:sepolia": "bash -c 'source .env && forge script FundPaymasterOps --rpc-url sepolia --account $SEPOLIA_DEPLOYER_NAME --chain sepolia -vvvvv'",
     "test": "forge test -vvv",
@@ -35,7 +37,8 @@
     "test:unit:deep": "FOUNDRY_FUZZ_RUNS=5000 pnpm test:unit",
     "verify:arbitrum": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url arbitrum --chain arbitrum -vvvv'",
     "verify:mainnet": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url mainnet --chain mainnet -vvvv'",
-    "verify:sepolia": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url sepolia --chain sepolia -vvvv'"
+    "verify:sepolia": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url sepolia --chain sepolia -vvvv'",
+    "verify:upgrades:sepolia": "bash -c 'source .env && FOUNDRY_PROFILE=verify forge script VerifyAlphaUpgrades --rpc-url sepolia --chain sepolia -vvvv'"
   },
   "lint-staged": {
     "*.{js,css,md,ts,sol}": "forge fmt",

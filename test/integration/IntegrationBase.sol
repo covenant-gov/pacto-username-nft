@@ -55,7 +55,7 @@ contract IntegrationBase is ProtocolRegistryTestBase {
     registry = new PactoProtocolRegistry(owner, address(this));
     pool = new GlobalSponsorPool(registry);
     bootstrapPool = new BootstrapMintPool(registry);
-    nft = new PactoUsernameNFT(owner);
+    nft = new PactoUsernameNFT();
     policy = new SponsorPolicyRegistry(owner);
     bootstrapPolicy = new BootstrapClaimPolicy(registry);
 

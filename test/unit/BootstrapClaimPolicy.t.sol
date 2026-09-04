@@ -33,7 +33,7 @@ contract UnitBootstrapClaimPolicy is ProtocolRegistryTestBase {
     vm.warp(_ISSUED_AT);
 
     _registry = new PactoProtocolRegistry(_owner, address(this));
-    _nft = new PactoUsernameNFT(_owner);
+    _nft = new PactoUsernameNFT();
     _policy = new BootstrapClaimPolicy(_registry);
     _initializeRegistry(
       _registry,
@@ -147,16 +147,6 @@ contract UnitBootstrapClaimPolicy is ProtocolRegistryTestBase {
     assertFalse(_policy.isSponsorable(address(_nft), _innerCallData, _other, 0));
   }
 
-  function test_IsSponsorable_WhenNameIsReserved() external {
-    bytes32 _nameHash = keccak256(bytes(_NAME));
-    vm.prank(_owner);
-    _nft.setReservedName(_nameHash, true);
-
-    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
-
-    assertFalse(_policy.isSponsorable(address(_nft), _innerCallData, _claimer, 0));
-  }
-
   function test_IsSponsorable_WhenNostrSignatureLengthIsInvalid() external view {
     bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, hex'010203');
 
@@ -164,7 +154,7 @@ contract UnitBootstrapClaimPolicy is ProtocolRegistryTestBase {
   }
 
   function test_IsSponsorable_WhenUsernameNftIsUpdatedInTheRegistry() external {
-    PactoUsernameNFT _newNft = new PactoUsernameNFT(_owner);
+    PactoUsernameNFT _newNft = new PactoUsernameNFT();
     bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
 
     vm.prank(_owner);

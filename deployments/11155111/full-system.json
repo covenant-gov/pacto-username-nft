@@ -1,5 +1,5 @@
 {
-  "allowed7702Implementation": "0x33F920B5aF6c527f63BD6B24d58Dccd698b2DC60",
+  "allowed7702Implementation": "0x2E9156deE65d7946305C334824e2648Ff9128f45",
   "bootstrapClaimPolicy": "0x2BAC17B2aE2aA068bEa3064A3553EDee5D60aB6e",
   "bootstrapMintPool": "0x95d3B8B97C4ff48af010191E80CcAA9F55749A2B",
   "chainId": 11155111,
@@ -8,9 +8,9 @@
   "globalSponsorPool": "0x4EfeE104cF969bF70F342DFCd234f73A3bebEbeD",
   "nostrClaimLink": "0xCc0de30d2926995FB6458De7808E41E2a17B0e29",
   "pactoGlobalPaymaster": "0x04Fc205adA4c0c5C5024546E87972C4c4bB30D0F",
-  "pactoUsernameNft": "0x99FEEDa477EEFE03AB70D7Eb64c26cC08Cd89587",
+  "pactoUsernameNft": "0x09e08dB9B4275979Bb2aE8C86f3bB5d406c120d1",
   "policyVersion": 3,
   "protocolRegistry": "0xAF61198bf3b9D8d49FA82888121c187720D6Cfe8",
-  "sponsorPolicyRegistry": "0xe72588cE03Fc96D61fc1Db1612202d7a4Ee78ECa",
+  "sponsorPolicyRegistry": "0xd479edB2cfE051310553716d8628c92C81cBD0db",
   "usernameSystemFactory": "0x83BEDd6Ef7FBe62a8aCe6521137e86670D1Fd2E3"
 }
