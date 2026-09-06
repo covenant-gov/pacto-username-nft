@@ -65,7 +65,8 @@ pnpm update:registry:sepolia
 
 # Optional: Ownable2Step SponsorPolicyRegistry swap (no full redeploy)
 pnpm deploy:policy:sepolia
-pnpm update:registry:sepolia   # POLICY from sponsor-policy-registry.json; reseeds rotation selectors
+pnpm migrate:policy:v4:sepolia   # seed v4 targets + authorize navePirataFactory
+pnpm update:registry:sepolia     # POLICY from sponsor-policy-registry.json
 ```
 
 Verify EIP-7702 allowlist after UN-1:

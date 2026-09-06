@@ -10,6 +10,9 @@ contract UnitConstants is Test {
     assertEq(_config.chainId, 11_155_111);
     assertEq(_config.entryPoint, Constants.ENTRY_POINT_V07);
     assertEq(_config.allowed7702Implementation, Constants.SEPOLIA_7702_ACCOUNT);
+    assertEq(_config.navePirataFactory, Constants.SEPOLIA_NAVE_PIRATA_FACTORY);
+    assertEq(_config.squadSponsorFactory, Constants.SEPOLIA_SQUAD_SPONSOR_FACTORY);
+    assertEq(_config.safeProxyFactory, Constants.SEPOLIA_SAFE_PROXY_FACTORY);
   }
 
   function test_GetConfig_UnsupportedChain() external {

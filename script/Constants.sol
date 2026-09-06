@@ -7,10 +7,18 @@ library Constants {
   /// @param chainId The target chain id
   /// @param entryPoint The ERC-4337 EntryPoint for this chain
   /// @param allowed7702Implementation The allowlisted EIP-7702 account implementation
+  /// @param navePirataFactory The Nave Pirata factory for target-tier sponsorship
+  /// @param squadSponsorFactory The squad sponsor factory for target-tier sponsorship
+  /// @param safeProxyFactory The Safe proxy factory for target-tier sponsorship
+  /// @param warGameFactory The war-game factory authorized as registrar (zero when unknown)
   struct ChainConfig {
     uint256 chainId;
     address entryPoint;
     address allowed7702Implementation;
+    address navePirataFactory;
+    address squadSponsorFactory;
+    address safeProxyFactory;
+    address warGameFactory;
   }
 
   /// @notice ERC-4337 EntryPoint v0.7 on supported chains
@@ -18,6 +26,15 @@ library Constants {
 
   /// @notice PactoSimple7702Account on Sepolia (pacto-squad-sponsor deployments)
   address internal constant SEPOLIA_7702_ACCOUNT = 0x33F920B5aF6c527f63BD6B24d58Dccd698b2DC60;
+
+  /// @notice pacto-gov Nave Pirata factory on Sepolia
+  address internal constant SEPOLIA_NAVE_PIRATA_FACTORY = 0xba54955cF9eab7F546c3a1c1fCE2584996626ef0;
+
+  /// @notice pacto-squad-sponsor factory on Sepolia
+  address internal constant SEPOLIA_SQUAD_SPONSOR_FACTORY = 0x9F6b1936e1817A074033591bb55DC65CBB29e4d7;
+
+  /// @notice Safe proxy factory on Sepolia
+  address internal constant SEPOLIA_SAFE_PROXY_FACTORY = 0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67;
 
   /// @notice Returns chain configuration for `chainId`
   /// @param chainId The target chain id
@@ -30,16 +47,39 @@ library Constants {
   }
 
   function _mainnet() private pure returns (ChainConfig memory) {
-    return ChainConfig({chainId: 1, entryPoint: ENTRY_POINT_V07, allowed7702Implementation: address(0)});
+    return ChainConfig({
+      chainId: 1,
+      entryPoint: ENTRY_POINT_V07,
+      allowed7702Implementation: address(0),
+      navePirataFactory: address(0),
+      squadSponsorFactory: address(0),
+      safeProxyFactory: address(0),
+      warGameFactory: address(0)
+    });
   }
 
   function _sepolia() private pure returns (ChainConfig memory) {
-    return
-      ChainConfig({chainId: 11_155_111, entryPoint: ENTRY_POINT_V07, allowed7702Implementation: SEPOLIA_7702_ACCOUNT});
+    return ChainConfig({
+      chainId: 11_155_111,
+      entryPoint: ENTRY_POINT_V07,
+      allowed7702Implementation: SEPOLIA_7702_ACCOUNT,
+      navePirataFactory: SEPOLIA_NAVE_PIRATA_FACTORY,
+      squadSponsorFactory: SEPOLIA_SQUAD_SPONSOR_FACTORY,
+      safeProxyFactory: SEPOLIA_SAFE_PROXY_FACTORY,
+      warGameFactory: address(0)
+    });
   }
 
   function _arbitrum() private pure returns (ChainConfig memory) {
-    return ChainConfig({chainId: 42_161, entryPoint: ENTRY_POINT_V07, allowed7702Implementation: address(0)});
+    return ChainConfig({
+      chainId: 42_161,
+      entryPoint: ENTRY_POINT_V07,
+      allowed7702Implementation: address(0),
+      navePirataFactory: address(0),
+      squadSponsorFactory: address(0),
+      safeProxyFactory: address(0),
+      warGameFactory: address(0)
+    });
   }
 
   /// @notice Thrown when a chain is unsupported
