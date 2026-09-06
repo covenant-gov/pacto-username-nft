@@ -9,8 +9,8 @@
   "nostrClaimLink": "0xCc0de30d2926995FB6458De7808E41E2a17B0e29",
   "pactoGlobalPaymaster": "0x04Fc205adA4c0c5C5024546E87972C4c4bB30D0F",
   "pactoUsernameNft": "0x09e08dB9B4275979Bb2aE8C86f3bB5d406c120d1",
-  "policyVersion": 3,
+  "policyVersion": 8,
   "protocolRegistry": "0xAF61198bf3b9D8d49FA82888121c187720D6Cfe8",
-  "sponsorPolicyRegistry": "0xd479edB2cfE051310553716d8628c92C81cBD0db",
+  "sponsorPolicyRegistry": "0x1350F096FA383e0D73C02fc13797F207295ef248",
   "usernameSystemFactory": "0x83BEDd6Ef7FBe62a8aCe6521137e86670D1Fd2E3"
 }
