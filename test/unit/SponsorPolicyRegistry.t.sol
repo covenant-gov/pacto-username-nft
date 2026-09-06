@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
+import {ISponsorPolicyRegistry} from 'interfaces/ISponsorPolicyRegistry.sol';
 import {Test} from 'forge-std/Test.sol';
 
 contract UnitSponsorPolicyRegistry is Test {
@@ -63,7 +64,7 @@ contract UnitSponsorPolicyRegistry is Test {
   }
 
   function test_RegisterTopHat_WhenCallerIsUnauthorized() external {
-    vm.expectRevert(abi.encodeWithSelector(SponsorPolicyRegistry.SponsorPolicyRegistry_UnauthorizedRegistrar.selector, _other));
+    vm.expectRevert(abi.encodeWithSelector(ISponsorPolicyRegistry.SponsorPolicyRegistry_UnauthorizedRegistrar.selector, _other));
     vm.prank(_other);
     _policy.registerTopHat(_TOP_HAT_ID);
   }
@@ -78,7 +79,7 @@ contract UnitSponsorPolicyRegistry is Test {
     _policy.registerModulesForTopHat(_TOP_HAT_ID, _modules);
     vm.expectRevert(
       abi.encodeWithSelector(
-        SponsorPolicyRegistry.SponsorPolicyRegistry_ModuleAlreadyIndexed.selector, _module, _TOP_HAT_ID
+        ISponsorPolicyRegistry.SponsorPolicyRegistry_ModuleAlreadyIndexed.selector, _module, _TOP_HAT_ID
       )
     );
     _policy.registerModulesForTopHat(_TOP_HAT_ID + 1, _modules);
