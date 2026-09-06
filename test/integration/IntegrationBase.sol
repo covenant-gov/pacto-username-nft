@@ -29,8 +29,6 @@ contract IntegrationBase is ProtocolRegistryTestBase {
     hex'715358459e600817a7e0fb4371b594a9e36f8c4f0272a41e4248fc3b1021accf6cdf2d2718424a5491d94ae1935fbb1b569c3e92b23269143e71e3635be3efb2';
 
   bytes4 internal constant INITIATE_ADDRESS_TRANSFER_SELECTOR = 0xa4df29b5;
-  bytes4 internal constant CLAIM_ADDRESS_TRANSFER_SELECTOR = 0xbf010955;
-  bytes4 internal constant CANCEL_ADDRESS_TRANSFER_SELECTOR = 0xd88208dc;
 
   address internal owner = makeAddr('owner');
   address internal claimer;
@@ -74,9 +72,7 @@ contract IntegrationBase is ProtocolRegistryTestBase {
     );
 
     vm.startPrank(owner);
-    policy.registerSelector(address(nft), INITIATE_ADDRESS_TRANSFER_SELECTOR);
-    policy.registerSelector(address(nft), CLAIM_ADDRESS_TRANSFER_SELECTOR);
-    policy.registerSelector(address(nft), CANCEL_ADDRESS_TRANSFER_SELECTOR);
+    policy.registerTarget(address(nft));
     vm.stopPrank();
 
     vm.deal(address(this), 20 ether);

@@ -48,17 +48,19 @@ Tracking items for [pacto-app](https://github.com/covenant-gov/pacto-app). Contr
 ## Launchpad / SquadAdmin
 
 - [ ] SquadAdmin-only bootstrap path when Nave Pirata not deployed — use global member sponsor if NFT holder
-- [ ] Post-deploy: protocol admin or app hook to `registerTarget(squadAdminClone)` on policy registry
+- [ ] Gov module writes use **TopHat** tier — auto-registered by `deployNavePirata` (pacto-gov #36); no per-clone `registerTarget`
 - [ ] Coordinate with pacto-gov deploy helper addresses per chain
+- [ ] **Blocked on:** pacto-gov factory hook + pacto-app sponsorship router (#379)
 
 ---
 
 ## Policy admin (protocol ops)
 
-- [ ] Script or multisig runbook to `registerTarget` / `registerSelector` for new app features
-- [ ] Do **not** register `claim()` on member registry — bootstrap uses fixed `BootstrapClaimPolicy`
+- [ ] Runbook: `pnpm migrate:policy:v4:sepolia` after `deploy:policy:sepolia` for alpha migration
+- [ ] Owner `registerTarget` for new protocol factories only — never user-deployed clones
+- [ ] Do **not** sponsor `claim()` on member path — bootstrap uses fixed `BootstrapClaimPolicy`
 - [ ] Bump `policyVersion` communicated to clients (release notes / address book update)
-- [ ] Seed pacto-gov factory addresses on Mainnet / Arbitrum when known
+- [ ] Seed pacto-gov factory addresses on Mainnet / Arbitrum when known (`NAVE_PIRATA_FACTORY` env)
 - [ ] Fund `BootstrapMintPool` separately from `GlobalSponsorPool`; monitor bootstrap drain
 
 ---

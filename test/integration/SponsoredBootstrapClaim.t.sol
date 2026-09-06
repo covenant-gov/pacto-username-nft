@@ -108,8 +108,16 @@ contract IntegrationSponsoredBootstrapClaim is IntegrationBase {
     assertEq(bootstrapPool.spendablePoolWei(), 10 ether);
   }
 
-  function test_SponsoredMemberAction_WhenClaimSelectorIsNotRegisteredOnMemberPolicy() external view {
+  function test_SponsoredMemberAction_WhenClaimIsRejectedOnMemberPath() external {
     bytes memory _claimInner = claimCalldata(USERNAME, NPUB_HASH, NOSTR_SIGNATURE);
-    assertFalse(SponsorPolicyRegistry(address(policy)).isSponsorable(address(nft), _claimInner, claimer, 1));
+    assertTrue(SponsorPolicyRegistry(address(policy)).isSponsorable(address(nft), _claimInner, claimer, 1));
+
+    executeClaim();
+
+    PackedUserOperation memory _userOp = buildUserOp(claimer, address(nft), _claimInner, 0);
+    _userOp.paymasterAndData = buildPaymasterData(NPUB_HASH, claimer, address(0));
+
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_MemberNotSponsorable.selector);
+    paymaster.exposedValidate(_userOp, 1 ether);
   }
 }

@@ -86,6 +86,61 @@ contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
     assertEq(_context, hex'01');
   }
 
+  function test_ExposedValidate_WhenTopHatModuleIsSponsored() external {
+    _claimUsername();
+
+    address _factory = makeAddr('naveFactory');
+    address _module = makeAddr('quartermaster');
+    uint256 _topHatId = 99;
+
+    vm.startPrank(_owner);
+    _policy.setAuthorizedRegistrar(_factory, true);
+    vm.stopPrank();
+
+    address[] memory _modules = new address[](1);
+    _modules[0] = _module;
+
+    vm.startPrank(_factory);
+    _policy.registerTopHat(_topHatId);
+    _policy.registerModulesForTopHat(_topHatId, _modules);
+    vm.stopPrank();
+
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, _module, hex'12345678', 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
+
+    assertEq(_validationData, 0);
+    assertEq(_context, hex'01');
+  }
+
+  function test_ExposedValidate_WhenMemberPathAllowsNonZeroExecuteValue() external {
+    _claimUsername();
+    vm.prank(_owner);
+    _policy.registerTarget(_target);
+
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, _target, hex'', 1 ether);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
+
+    assertEq(_validationData, 0);
+    assertEq(_context, hex'01');
+  }
+
+  function test_ExposedValidate_WhenMemberPathRejectsClaimSelectorOnUsernameNft() external {
+    _claimUsername();
+    vm.prank(_owner);
+    _policy.registerTarget(address(_nft));
+
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_MemberNotSponsorable.selector);
+    _paymaster.exposedValidate(_userOp, 1 ether);
+  }
+
   function test_ExposedValidate_WhenPolicyDeniesTheCall() external {
     _claimUsername();
 

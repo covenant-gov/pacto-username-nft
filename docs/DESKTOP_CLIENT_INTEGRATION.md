@@ -24,7 +24,7 @@ After deploy, pin addresses from `deployments/<chainId>/full-system.json` into p
         "sponsorPolicyRegistry": "0x…",
         "bootstrapClaimPolicy": "0x…",
         "pactoGlobalPaymaster": "0x…",
-        "policyVersion": 3,
+        "policyVersion": 4,
         "allowed7702Implementation": "0x33F920B5aF6c527f63BD6B24d58Dccd698b2DC60",
         "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
       }
@@ -46,27 +46,29 @@ flowchart TD
   Start[Build tx]
   Claim{First-time claim?}
   Bootstrap{bootstrap pool funded?}
+  Squad{Squad sponsor deployed eligible and headroom?}
+  Global{Username NFT holder and global pool headroom?}
   HasEth{Roster EOA has ETH?}
-  Squad{Squad sponsor available and eligible?}
-  Global{Username NFT holder and global pool funded?}
   BootstrapOp[Bootstrap UserOp + global paymaster]
-  EOA[Normal EOA tx]
   SquadOp[Squad UserOp + squad paymaster]
   GlobalOp[Global UserOp + global paymaster]
+  EOA[Normal EOA tx]
   Fail[Fail: no gas path]
 
   Start --> Claim
   Claim -->|yes, npubOf == 0| Bootstrap
   Bootstrap -->|yes| BootstrapOp
-  Bootstrap -->|no| HasEth
-  Claim -->|no| HasEth
-  HasEth -->|yes| EOA
-  HasEth -->|no| Squad
+  Bootstrap -->|no| Squad
+  Claim -->|no| Squad
   Squad -->|yes| SquadOp
   Squad -->|no| Global
   Global -->|yes| GlobalOp
-  Global -->|no| Fail
+  Global -->|no| HasEth
+  HasEth -->|yes| EOA
+  HasEth -->|no| Fail
 ```
+
+**Pool precedence (alpha):** squad sponsor (when deployed + eligible + headroom) → global member pool → EOA → fail. Ops funds the global pool for zero-ETH onboarding; squads can deploy a squad sponsor clone and fund it locally when the global pool is low.
 
 **Bootstrap path requirements** (one-time `claim()` only):
 
@@ -80,12 +82,26 @@ flowchart TD
 **Global member path requirements** (post-mint actions):
 
 - `PactoUsernameNFT.eligibleMember(rosterEvm)` returns non-zero `(npubHash, tokenId)`.
-- `GlobalSponsorPool.spendablePoolWei()` sufficient.
-- Target + selector allowed by `SponsorPolicyRegistry`.
+- `GlobalSponsorPool.spendablePoolWei()` sufficient (115% headroom).
+- Call allowed by `SponsorPolicyRegistry` (see three tiers below).
 - **`policy` in paymaster payload MUST be `address(0)`** — custom policies are rejected on the member path.
+- `claim()` on the username NFT is **never** sponsored on the member path (bootstrap lane only).
+- Factory deploys may use `execute(..., value > 0, ...)` — paymaster sponsors **gas only**; the account must hold ETH for the value leg.
 - Bundler configured.
 
 **Prefer squad sponsor** when both squad and global member paths work — global pool is shared protocol float.
+
+### Policy tiers (`SponsorPolicyRegistry` v4)
+
+| Tier | Use | Examples |
+|------|-----|----------|
+| **Selector** | Optional narrow writes | Legacy per-selector ops (migration) |
+| **Target** | Protocol factories + username NFT | `pactoUsernameNft`, `navePirataFactory`, `squadSponsorFactory`, `safeProxyFactory` |
+| **TopHat** | All gov modules for one squad tree | One `topHatId` → Quartermaster, Mutiny, Treasury Authority, Safe, SquadAdmin |
+
+TopHat registration is **automatic** at end of `deployNavePirata` (pacto-gov factory hook). Clients do **not** encode `topHatId` in paymaster payload — the paymaster resolves `moduleToTopHat[target]` on-chain.
+
+`createSquadSponsor*` must use **`value = 0`**; fund the clone via `deposit()` after deploy.
 
 ---
 
@@ -206,10 +222,12 @@ Maintain `src/lib/evm/sponsor/pacto_actions.ts` mapping app flows → `(target, 
 
 | Flow | Target | Sponsor lane | Notes |
 |------|--------|--------------|-------|
-| Claim username | `pactoUsernameNft` | **Bootstrap** | `claim(...)` — not on member registry |
-| Initiate / claim / cancel address transfer | `pactoUsernameNft` | Member | rotation selectors seeded at deploy |
-| SquadAdmin bootstrap | pacto-gov factories | Member | register via policy admin |
-| SquadAdmin writes | clone address | Member | `registerTarget(clone)` post-deploy |
+| Claim username | `pactoUsernameNft` | **Bootstrap** | `claim(...)` — rejected on member path |
+| Username NFT writes (rotation, etc.) | `pactoUsernameNft` | Member | **Target** tier (`registerTarget`) |
+| `deployNavePirata` | `navePirataFactory` | Member | **Target** tier; auto `registerTopHat` in same tx (pacto-gov) |
+| Gov module writes | QM / Mutiny / TA / Safe / SquadAdmin | Member | **TopHat** tier via `moduleToTopHat` |
+| `createSquadSponsor*` | `squadSponsorFactory` | Member | **Target** tier; `value = 0` |
+| Safe deploy | `safeProxyFactory` | Member | **Target** tier |
 
 Before building a global UserOp, assert local catalog version ≥ on-chain `policyVersion`.
 
@@ -247,7 +265,7 @@ EIP-7702 **activation** gas is funded separately by ops — not from bootstrap o
 
 ## 10. Operator smoke (post-deploy)
 
-1. Deploy: `pnpm deploy:sepolia` → verify `deployments/11155111/full-system.json`.
+1. Deploy: `pnpm deploy:sepolia` → verify `deployments/11155111/full-system.json` (`policyVersion: 4`).
 2. Fund paymaster: `pnpm fund:paymaster:sepolia`.
 3. Fund pools:
    ```bash
@@ -255,6 +273,16 @@ EIP-7702 **activation** gas is funded separately by ops — not from bootstrap o
    cast send $BOOTSTRAP_POOL "deposit()" --value 1ether …
    ```
 4. Bootstrap claim username on Sepolia via sponsored UserOp; verify badge + global sponsored rotation write.
+
+### Policy v4 migration (existing Sepolia alpha)
+
+```bash
+pnpm deploy:policy:sepolia          # new SponsorPolicyRegistry
+pnpm migrate:policy:v4:sepolia      # seed targets + authorize navePirataFactory
+pnpm update:registry:sepolia        # POLICY=<new registry> pointer swap
+```
+
+No paymaster redeploy required. Re-read `policyVersion` from the new registry before shipping client updates.
 
 ---
 

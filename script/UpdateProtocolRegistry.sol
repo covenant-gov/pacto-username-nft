@@ -5,7 +5,10 @@ import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 
+import {Constants} from 'script/Constants.sol';
 import {DeploymentArtifacts} from 'script/DeploymentArtifacts.sol';
+import {PolicySeeding} from 'script/PolicySeeding.sol';
+import {PolicyTargetResolver} from 'script/PolicyTargetResolver.sol';
 
 import {stdJson} from 'forge-std/StdJson.sol';
 import {console} from 'forge-std/console.sol';
@@ -106,7 +109,12 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     if (updates.policy != address(0) && updates.policy != registry.policy()) {
       registry.set(IPactoProtocolRegistry.ProtocolComponent.Policy, updates.policy);
       if (deployer == registry.owner()) {
-        _seedMemberPolicySelectors(SponsorPolicyRegistry(updates.policy), registry.usernameNft());
+        Constants.ChainConfig memory _config = Constants.getConfig(block.chainid);
+        PolicySeeding.seedMemberPolicyV4(
+          SponsorPolicyRegistry(updates.policy),
+          registry.usernameNft(),
+          PolicyTargetResolver.resolveFactoryTargets(_config)
+        );
       }
     }
     if (updates.bootstrapPolicy != address(0)) {
@@ -191,21 +199,15 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     return (address(0), false);
   }
 
-  /// @notice Registers member-path username NFT rotation selectors on a policy registry
-  function _seedMemberPolicySelectors(SponsorPolicyRegistry policy, address usernameNft) internal {
-    policy.registerSelector(usernameNft, _INITIATE_ADDRESS_TRANSFER_SELECTOR);
-    policy.registerSelector(usernameNft, _CLAIM_ADDRESS_TRANSFER_SELECTOR);
-    policy.registerSelector(usernameNft, _CANCEL_ADDRESS_TRANSFER_SELECTOR);
-  }
-
-  /// @notice Migrates member-path NFT rotation selectors from old NFT to new NFT
+  /// @notice Migrates member-path NFT sponsorship from legacy selectors or targets to a new NFT
   function _migrateMemberPolicySelectors(SponsorPolicyRegistry policy, address oldNft, address newNft) internal {
     if (oldNft != address(0)) {
       policy.deregisterSelector(oldNft, _INITIATE_ADDRESS_TRANSFER_SELECTOR);
       policy.deregisterSelector(oldNft, _CLAIM_ADDRESS_TRANSFER_SELECTOR);
       policy.deregisterSelector(oldNft, _CANCEL_ADDRESS_TRANSFER_SELECTOR);
+      if (policy.isContractAllowed(oldNft)) policy.deregisterTarget(oldNft);
     }
-    _seedMemberPolicySelectors(policy, newNft);
+    policy.registerTarget(newNft);
   }
 
   function _resolveNostrClaimLink(string memory json) internal view returns (address link) {

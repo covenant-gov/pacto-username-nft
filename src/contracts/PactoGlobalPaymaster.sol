@@ -151,6 +151,12 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
       }
     }
 
+    if (
+      target == REGISTRY.usernameNft() && innerCallData.length >= 4 && bytes4(innerCallData[:4]) == _CLAIM_SELECTOR
+    ) {
+      revert GlobalPaymaster_MemberNotSponsorable();
+    }
+
     if (!ISponsorPolicy(REGISTRY.policy()).isSponsorable(target, innerCallData, data.member, _tokenId)) {
       revert GlobalPaymaster_MemberNotSponsorable();
     }

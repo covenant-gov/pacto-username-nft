@@ -202,14 +202,20 @@ Additional checks: EIP-7702 member binding (same as [pacto-squad-sponsor](https:
 
 ### Policy registry (member path only)
 
-- **Default deny.** Owner registers `registerTarget(address)` or `registerSelector(address, bytes4)`.
-- `policyVersion` increments on each change; clients sync via address book.
-- Deploy seeds **rotation selectors only** on `PactoUsernameNFT` when deployer == protocol owner:
-  - `initiateAddressTransfer(bytes32,address)` — `0xa4df29b5`
-  - `claimAddressTransfer(bytes32)` — `0xbf010955`
-  - `cancelAddressTransfer(bytes32)` — `0xd88208dc`
+- **Default deny.** Three sponsorship tiers:
+  1. **Target** — contract-wide allow (`registerTarget`). Used for username NFT + protocol factories.
+  2. **Selector** — narrow allow (`registerSelector`). Optional; legacy migration support.
+  3. **TopHat** — all indexed gov modules for one squad tree (`registerTopHat` + `moduleToTopHat`).
+- `authorizedRegistrars` — only pacto-gov factories may call `registerTopHat` / `registerModulesForTopHat`.
+- `policyVersion` increments on target/selector/topHat/module changes; clients sync via address book.
+- Deploy seeds **four targets** when deployer == protocol owner:
+  - `PactoUsernameNFT` (contract-wide; `claim()` blocked on member path in paymaster)
+  - `navePirataFactory` (+ authorized as registrar)
+  - `squadSponsorFactory`
+  - `safeProxyFactory`
+- Member path rejects `claim()` selector on username NFT even when target-tier allowed.
 
-**Modularity:** new Pacto app actions = registry update + client catalog entry. No paymaster redeploy.
+**Modularity:** new factory targets = owner `registerTarget`; new squad trees = factory auto `registerTopHat`. No paymaster redeploy for policy-only changes.
 
 ### `paymasterAndData` layout (v1)
 
@@ -266,7 +272,7 @@ See [README](../README.md). Artifacts: `deployments/<chainId>/full-system.json` 
   "sponsorPolicyRegistry": "0x…",
   "bootstrapClaimPolicy": "0x…",
   "pactoGlobalPaymaster": "0x…",
-  "policyVersion": 3,
+  "policyVersion": 4,
   "deployer": "0x…"
 }
 ```
@@ -281,7 +287,7 @@ Alpha NFT upgrade (no claim migration):
 
 ```bash
 pnpm deploy:nft:sepolia        # writes deployments/<chainId>/username-nft.json
-pnpm update:registry:sepolia   # points registry at new NFT; reseeds rotation selectors when owner==deployer
+pnpm update:registry:sepolia   # points registry at new NFT; registers target on new NFT when owner==deployer
 ```
 
 EIP-7702 allowlist (UN-1 / [pacto-aa#1](https://github.com/covenant-gov/pacto-aa/issues/1)):
@@ -296,9 +302,10 @@ pnpm update:registry:sepolia   # sets Allowed7702 from artifact (or ALLOWED_7702
 Optional SponsorPolicyRegistry swap (Ownable2Step; no full-system redeploy):
 
 ```bash
-pnpm deploy:policy:sepolia     # writes deployments/<chainId>/sponsor-policy-registry.json
-pnpm update:registry:sepolia   # points registry.policy at new SPR; reseeds rotation selectors when owner==deployer
-pnpm verify:upgrades:sepolia   # Etherscan: new NFT + SPR only (not full VerifyDeploy)
+pnpm deploy:policy:sepolia        # writes deployments/<chainId>/sponsor-policy-registry.json
+pnpm migrate:policy:v4:sepolia    # seed v4 targets + authorize navePirataFactory
+pnpm update:registry:sepolia      # points registry.policy at new SPR
+pnpm verify:upgrades:sepolia      # Etherscan: new NFT + SPR only (not full VerifyDeploy)
 ```
 
 Fund pools separately:

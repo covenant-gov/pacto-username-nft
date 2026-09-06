@@ -6,6 +6,8 @@ import {UsernameSystemFactory} from 'contracts/UsernameSystemFactory.sol';
 
 import {Constants} from 'script/Constants.sol';
 import {DeploymentArtifacts} from 'script/DeploymentArtifacts.sol';
+import {PolicySeeding} from 'script/PolicySeeding.sol';
+import {PolicyTargetResolver} from 'script/PolicyTargetResolver.sol';
 
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 
@@ -14,10 +16,6 @@ import {console} from 'forge-std/console.sol';
 /// @notice Deploys the username NFT and global sponsorship system on a supported chain
 contract DeployUsernameSystem is DeploymentArtifacts {
   UsernameSystemFactory internal _factory;
-
-  bytes4 internal constant _INITIATE_ADDRESS_TRANSFER_SELECTOR = 0xa4df29b5;
-  bytes4 internal constant _CLAIM_ADDRESS_TRANSFER_SELECTOR = 0xbf010955;
-  bytes4 internal constant _CANCEL_ADDRESS_TRANSFER_SELECTOR = 0xd88208dc;
 
   function run() external {
     Constants.ChainConfig memory _config = Constants.getConfig(block.chainid);
@@ -30,7 +28,11 @@ contract DeployUsernameSystem is DeploymentArtifacts {
 
     _factory = new UsernameSystemFactory(IEntryPoint(_config.entryPoint), _owner, _allowed7702);
     if (_deployer == _owner) {
-      _seedMemberPolicySelectors(SponsorPolicyRegistry(_factory.POLICY()), _factory.USERNAME_NFT());
+      PolicySeeding.seedMemberPolicyV4(
+        SponsorPolicyRegistry(_factory.POLICY()),
+        _factory.USERNAME_NFT(),
+        PolicyTargetResolver.resolveFactoryTargets(_config)
+      );
     }
     vm.stopBroadcast();
 
@@ -52,13 +54,6 @@ contract DeployUsernameSystem is DeploymentArtifacts {
     _artifact.policyVersion = SponsorPolicyRegistry(_factory.POLICY()).policyVersion();
     _artifact.deployer = _deployer;
     _writeFullSystemJson(_artifact);
-  }
-
-  /// @notice Registers member-path username NFT rotation selectors on the default policy registry
-  function _seedMemberPolicySelectors(SponsorPolicyRegistry policy, address usernameNft) internal {
-    policy.registerSelector(usernameNft, _INITIATE_ADDRESS_TRANSFER_SELECTOR);
-    policy.registerSelector(usernameNft, _CLAIM_ADDRESS_TRANSFER_SELECTOR);
-    policy.registerSelector(usernameNft, _CANCEL_ADDRESS_TRANSFER_SELECTOR);
   }
 
   /// @notice Logs deployed contract addresses
