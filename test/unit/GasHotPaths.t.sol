@@ -11,17 +11,17 @@ import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 import {UserOpCalldataLib} from 'contracts/utils/UserOpCalldataLib.sol';
+import {Vm} from 'forge-std/Vm.sol';
 import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
 import {ProtocolRegistryTestBase} from 'test/helpers/ProtocolRegistryTestBase.sol';
 import {MockEntryPoint} from 'test/mocks/MockEntryPoint.sol';
 import {PactoGlobalPaymasterHarness} from 'test/mocks/PactoGlobalPaymasterHarness.sol';
 
 /**
- * @notice Current-code gas baselines for the sponsorship hot path.
+ * @notice Gas baselines for the sponsorship hot path.
  * @dev Staging runs under `pauseGasMetering` in the same transaction as the measured call,
- *      so slots written during staging are warm. Refresh the baseline with
- *      `forge snapshot --match-contract UnitGasHotPaths --snap .gas-snapshot.baseline --offline`
- *      before changing production code. Do not regenerate that file afterward.
+ *      so slots written during staging are warm. Compare against `.gas-snapshot.baseline`.
+ *      Refresh the current file with `pnpm snapshot:gas`. Do not regenerate the baseline.
  */
 contract UnitGasHotPaths is ProtocolRegistryTestBase {
   /// @notice Thrown when a metered call returns an unexpected value
@@ -73,7 +73,7 @@ contract UnitGasHotPaths is ProtocolRegistryTestBase {
     _bootstrapPool = new BootstrapMintPool(_registry);
     _nft = new PactoUsernameNFT();
     _policy = new SponsorPolicyRegistry(_owner);
-    _bootstrapPolicy = new BootstrapClaimPolicy(_registry);
+    _bootstrapPolicy = new BootstrapClaimPolicy(_nft);
     _paymaster = new PactoGlobalPaymasterHarness(
       IEntryPoint(address(_entryPoint)), _nft, _policy, _bootstrapPolicy, _pool, _bootstrapPool, _allowed7702
     );
@@ -123,6 +123,35 @@ contract UnitGasHotPaths is ProtocolRegistryTestBase {
 
     (bytes32 _npubHash, uint256 _tokenId) = _nft.eligibleMember(_claimer);
     _require(_npubHash == _NPUB_HASH && _tokenId == 1);
+  }
+
+  function test_Gas_Membership() external {
+    vm.pauseGasMetering();
+    _claimUsername();
+    vm.resumeGasMetering();
+
+    (bytes32 _npubHash, uint64 _tokenId) = _nft.membership(_claimer);
+    _require(_npubHash == _NPUB_HASH && _tokenId == 1);
+  }
+
+  function test_Membership_PerformsTwoSloads() external {
+    _claimUsername();
+
+    vm.startStateDiffRecording();
+    _nft.membership(_claimer);
+    Vm.AccountAccess[] memory _accesses = vm.stopAndReturnStateDiff();
+
+    uint256 _sloads;
+    uint256 _length = _accesses.length;
+    for (uint256 _i; _i < _length; ++_i) {
+      if (_accesses[_i].account != address(_nft)) continue;
+      uint256 _storageLength = _accesses[_i].storageAccesses.length;
+      for (uint256 _j; _j < _storageLength; ++_j) {
+        if (!_accesses[_i].storageAccesses[_j].isWrite) ++_sloads;
+      }
+    }
+
+    assertEq(_sloads, 2);
   }
 
   function test_Gas_IsPendingTransfer() external {

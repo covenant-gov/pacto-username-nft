@@ -55,7 +55,7 @@ contract IntegrationBase is ProtocolRegistryTestBase {
     bootstrapPool = new BootstrapMintPool(registry);
     nft = new PactoUsernameNFT();
     policy = new SponsorPolicyRegistry(owner);
-    bootstrapPolicy = new BootstrapClaimPolicy(registry);
+    bootstrapPolicy = new BootstrapClaimPolicy(nft);
 
     paymaster = new PactoGlobalPaymasterHarness(
       IEntryPoint(address(entryPoint)), nft, policy, bootstrapPolicy, pool, bootstrapPool, allowed7702

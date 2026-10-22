@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
+import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
 import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
@@ -56,5 +57,6 @@ contract UnitUsernameSystemFactory is Test {
     assertEq(address(_paymaster.POOL()), _factory.POOL());
     assertEq(address(_paymaster.BOOTSTRAP_POOL()), _factory.BOOTSTRAP_POOL());
     assertEq(_paymaster.ALLOWED_7702_IMPLEMENTATION(), _allowed7702);
+    assertEq(address(BootstrapClaimPolicy(_factory.BOOTSTRAP_POLICY()).USERNAME_NFT()), _factory.USERNAME_NFT());
   }
 }

@@ -51,7 +51,7 @@ contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
     _bootstrapPool = new BootstrapMintPool(_registry);
     _nft = new PactoUsernameNFT();
     _policy = new SponsorPolicyRegistry(_owner);
-    _bootstrapPolicy = new BootstrapClaimPolicy(_registry);
+    _bootstrapPolicy = new BootstrapClaimPolicy(_nft);
 
     _paymaster = new PactoGlobalPaymasterHarness(
       IEntryPoint(address(_entryPoint)), _nft, _policy, _bootstrapPolicy, _pool, _bootstrapPool, _allowed7702

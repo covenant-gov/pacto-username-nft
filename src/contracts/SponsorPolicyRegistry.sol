@@ -58,15 +58,15 @@ contract SponsorPolicyRegistry is ISponsorPolicyRegistry, Ownable2Step {
     address,
     uint256
   ) external view returns (bool sponsorable) {
+    uint256 _topHatId = moduleToTopHat[target];
+    if (_topHatId != 0 && _topHatSponsored[_topHatId]) return true;
+
     if (_contractAllowed[target]) return true;
 
     if (callData.length >= 4) {
       bytes4 _selector = bytes4(callData[:4]);
       if (_selectorAllowed[target][_selector]) return true;
     }
-
-    uint256 _topHatId = moduleToTopHat[target];
-    if (_topHatId != 0 && _topHatSponsored[_topHatId]) return true;
 
     return false;
   }
