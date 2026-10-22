@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
+import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
 import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {UsernameSystemFactory} from 'contracts/UsernameSystemFactory.sol';
 import {Test} from 'forge-std/Test.sol';
@@ -47,5 +48,13 @@ contract UnitUsernameSystemFactory is Test {
     assertEq(GlobalSponsorPool(payable(_factory.POOL())).paymaster(), _factory.PAYMASTER());
     assertEq(BootstrapMintPool(payable(_factory.BOOTSTRAP_POOL())).paymaster(), _factory.PAYMASTER());
     assertEq(address(GlobalSponsorPool(payable(_factory.POOL())).REGISTRY()), address(_registry));
+
+    PactoGlobalPaymaster _paymaster = PactoGlobalPaymaster(payable(_factory.PAYMASTER()));
+    assertEq(address(_paymaster.USERNAME_NFT()), _factory.USERNAME_NFT());
+    assertEq(address(_paymaster.POLICY()), _factory.POLICY());
+    assertEq(address(_paymaster.BOOTSTRAP_POLICY()), _factory.BOOTSTRAP_POLICY());
+    assertEq(address(_paymaster.POOL()), _factory.POOL());
+    assertEq(address(_paymaster.BOOTSTRAP_POOL()), _factory.BOOTSTRAP_POOL());
+    assertEq(_paymaster.ALLOWED_7702_IMPLEMENTATION(), _allowed7702);
   }
 }

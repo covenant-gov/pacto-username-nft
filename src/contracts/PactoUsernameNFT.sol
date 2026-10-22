@@ -26,8 +26,11 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712 {
   /// @notice Consumed claim nonce per npub hash
   mapping(bytes32 npubHash => uint256 nonce) public usedNonce;
 
-  /// @notice Primary npub hash to username record mapping
-  mapping(bytes32 npubHash => UsernameRecord record) internal _records;
+  /// @notice Packed controller data for an npub
+  mapping(bytes32 npubHash => Membership membership) internal _memberships;
+
+  /// @notice Claimed username for an npub
+  mapping(bytes32 npubHash => string name) internal _names;
 
   /// @notice Name to npub hash mapping for uniqueness
   mapping(string name => bytes32 npubHash) internal _nameToNpub;
@@ -59,31 +62,39 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712 {
 
   /// @inheritdoc IPactoUsernameNFT
   function eligibleMember(address member) external view returns (bytes32 npubHash, uint256 tokenId) {
-    npubHash = _addressToNpub[member];
-    if (npubHash == bytes32(0)) return (bytes32(0), 0);
+    uint64 _tokenId;
+    (npubHash, _tokenId) = _membershipOf(member);
+    tokenId = _tokenId;
+  }
 
-    UsernameRecord memory _record = _records[npubHash];
-    if (_record.evmAddress != member) return (bytes32(0), 0);
-
-    return (npubHash, _record.tokenId);
+  /// @inheritdoc IPactoUsernameNFT
+  function membership(address member) external view returns (bytes32 npubHash, uint64 tokenId) {
+    (npubHash, tokenId) = _membershipOf(member);
   }
 
   /// @inheritdoc IPactoUsernameNFT
   function isPendingTransfer(bytes32 _npubHash) external view returns (bool pending) {
-    return _records[_npubHash].pendingAddress != address(0);
+    return _memberships[_npubHash].pendingAddress != address(0);
   }
 
   /// @inheritdoc IPactoUsernameNFT
   function recordOf(bytes32 _npubHash) external view returns (UsernameRecord memory record) {
-    record = _records[_npubHash];
-    if (record.tokenId == 0) revert PactoUsernameNFT_RecordNotFound();
+    Membership memory _membership = _memberships[_npubHash];
+    if (_membership.tokenId == 0) revert PactoUsernameNFT_RecordNotFound();
+
+    record = UsernameRecord({
+      name: _names[_npubHash],
+      evmAddress: _membership.evmAddress,
+      pendingAddress: _membership.pendingAddress,
+      tokenId: _membership.tokenId
+    });
   }
 
   /// @inheritdoc IPactoUsernameNFT
   function canBootstrapClaim(address member, bytes32 npubHash) external view returns (bool canClaim) {
     if (member == address(0) || npubHash == bytes32(0)) return false;
     if (_addressToNpub[member] != bytes32(0)) return false;
-    if (_records[npubHash].tokenId != 0) return false;
+    if (_memberships[npubHash].tokenId != 0) return false;
     return true;
   }
 
@@ -121,8 +132,9 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712 {
     usedNonce[_npubHash] = _nonce;
 
     uint256 _tokenId = _nextTokenId++;
-    _records[_npubHash] =
-      UsernameRecord({name: _name, evmAddress: msg.sender, pendingAddress: address(0), tokenId: _tokenId});
+    _memberships[_npubHash] =
+      Membership({evmAddress: msg.sender, tokenId: uint64(_tokenId), pendingAddress: address(0)});
+    _names[_npubHash] = _name;
 
     _nameToNpub[_name] = _npubHash;
     _addressToNpub[msg.sender] = _npubHash;
@@ -135,35 +147,35 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712 {
 
   /// @inheritdoc IPactoUsernameNFT
   function initiateAddressTransfer(bytes32 _npubHash, address _newAddress) external {
-    UsernameRecord storage _record = _records[_npubHash];
-    if (_record.tokenId == 0) revert PactoUsernameNFT_RecordNotFound();
-    if (msg.sender != _record.evmAddress) revert PactoUsernameNFT_NotActiveController();
-    if (_record.pendingAddress != address(0)) revert PactoUsernameNFT_PendingTransferExists();
+    Membership storage _membership = _memberships[_npubHash];
+    if (_membership.tokenId == 0) revert PactoUsernameNFT_RecordNotFound();
+    if (msg.sender != _membership.evmAddress) revert PactoUsernameNFT_NotActiveController();
+    if (_membership.pendingAddress != address(0)) revert PactoUsernameNFT_PendingTransferExists();
     if (_newAddress == address(0)) revert PactoUsernameNFT_ZeroAddress();
-    if (_newAddress == _record.evmAddress) revert PactoUsernameNFT_InvalidTransferTarget();
+    if (_newAddress == _membership.evmAddress) revert PactoUsernameNFT_InvalidTransferTarget();
     if (_addressToNpub[_newAddress] != bytes32(0)) revert PactoUsernameNFT_AddressAlreadyClaimed();
 
-    _record.pendingAddress = _newAddress;
+    _membership.pendingAddress = _newAddress;
 
-    emit AddressTransferInitiated(_npubHash, _record.evmAddress, _newAddress);
+    emit AddressTransferInitiated(_npubHash, _membership.evmAddress, _newAddress);
   }
 
   /// @inheritdoc IPactoUsernameNFT
   function claimAddressTransfer(bytes32 _npubHash) external {
-    UsernameRecord storage _record = _records[_npubHash];
-    if (_record.tokenId == 0) revert PactoUsernameNFT_RecordNotFound();
-    if (_record.pendingAddress == address(0)) revert PactoUsernameNFT_NoPendingTransfer();
-    if (msg.sender != _record.pendingAddress) revert PactoUsernameNFT_NotPendingRecipient();
+    Membership storage _membership = _memberships[_npubHash];
+    if (_membership.tokenId == 0) revert PactoUsernameNFT_RecordNotFound();
+    if (_membership.pendingAddress == address(0)) revert PactoUsernameNFT_NoPendingTransfer();
+    if (msg.sender != _membership.pendingAddress) revert PactoUsernameNFT_NotPendingRecipient();
 
-    address _previousAddress = _record.evmAddress;
-    _record.evmAddress = msg.sender;
-    _record.pendingAddress = address(0);
+    address _previousAddress = _membership.evmAddress;
+    _membership.evmAddress = msg.sender;
+    _membership.pendingAddress = address(0);
 
     delete _addressToNpub[_previousAddress];
     _addressToNpub[msg.sender] = _npubHash;
 
     _internalTransfer = true;
-    _transfer(_previousAddress, msg.sender, _record.tokenId);
+    _transfer(_previousAddress, msg.sender, _membership.tokenId);
     _internalTransfer = false;
 
     emit AddressTransferClaimed(_npubHash, _previousAddress, msg.sender);
@@ -171,12 +183,12 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712 {
 
   /// @inheritdoc IPactoUsernameNFT
   function cancelAddressTransfer(bytes32 _npubHash) external {
-    UsernameRecord storage _record = _records[_npubHash];
-    if (_record.tokenId == 0) revert PactoUsernameNFT_RecordNotFound();
-    if (msg.sender != _record.evmAddress) revert PactoUsernameNFT_NotActiveController();
-    if (_record.pendingAddress == address(0)) revert PactoUsernameNFT_NoPendingTransfer();
+    Membership storage _membership = _memberships[_npubHash];
+    if (_membership.tokenId == 0) revert PactoUsernameNFT_RecordNotFound();
+    if (msg.sender != _membership.evmAddress) revert PactoUsernameNFT_NotActiveController();
+    if (_membership.pendingAddress == address(0)) revert PactoUsernameNFT_NoPendingTransfer();
 
-    _record.pendingAddress = address(0);
+    _membership.pendingAddress = address(0);
 
     emit AddressTransferCancelled(_npubHash, msg.sender);
   }
@@ -191,7 +203,7 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712 {
   ) internal view {
     if (_npubHash == bytes32(0) || _pubkey == bytes32(0)) revert PactoUsernameNFT_InvalidName();
     if (_nameToNpub[_name] != bytes32(0)) revert PactoUsernameNFT_NameUnavailable();
-    if (_records[_npubHash].tokenId != 0) revert PactoUsernameNFT_NpubAlreadyClaimed();
+    if (_memberships[_npubHash].tokenId != 0) revert PactoUsernameNFT_NpubAlreadyClaimed();
     if (_addressToNpub[msg.sender] != bytes32(0)) revert PactoUsernameNFT_AddressAlreadyClaimed();
     if (_npubHash != NostrClaimLink.npubHashFromPubkey(_pubkey)) revert PactoUsernameNFT_InvalidNpubHash();
     if (_issuedAt > block.timestamp + CLOCK_SKEW || block.timestamp > _issuedAt + MAX_BINDING_AGE) {
@@ -235,6 +247,20 @@ contract PactoUsernameNFT is IPactoUsernameNFT, ERC721, EIP712 {
       abi.encode(CLAIM_BINDING_TYPEHASH, _npubHash, _evmAddress, keccak256(bytes(_name)), _nonce, _issuedAt, _salt)
     );
     digest = _hashTypedDataV4(_structHash);
+  }
+
+  /// @notice Reads the packed membership slot for an active controller
+  /// @param member The candidate member address
+  /// @return npubHash The npub hash, or zero when the address is not the active controller
+  /// @return tokenId The linked token id, or zero when the address is not the active controller
+  function _membershipOf(address member) internal view returns (bytes32 npubHash, uint64 tokenId) {
+    npubHash = _addressToNpub[member];
+    if (npubHash == bytes32(0)) return (bytes32(0), 0);
+
+    Membership storage _membership = _memberships[npubHash];
+    if (_membership.evmAddress != member) return (bytes32(0), 0);
+
+    return (npubHash, _membership.tokenId);
   }
 
   /// @notice Restricts ERC-721 transfers to minting and controlled address rotation

@@ -1,0 +1,23 @@
+---
+description: Solidity structs belong on interfaces, not contracts
+globs: "**/*.sol"
+alwaysApply: false
+---
+
+# Structs live on interfaces
+
+Declare every struct in `src/interfaces`. Do not declare a struct in a contract, abstract, or library.
+
+The contract that stores or returns the type inherits the interface and uses the struct by name. Field order stays on the interface, because that order is the storage layout.
+
+```solidity
+// src/interfaces/IPactoUsernameNFT.sol
+struct Membership {
+  address evmAddress;
+  uint64 tokenId;
+  address pendingAddress;
+}
+
+// src/contracts/PactoUsernameNFT.sol
+mapping(bytes32 npubHash => Membership membership) internal _memberships;
+```

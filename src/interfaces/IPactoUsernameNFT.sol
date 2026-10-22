@@ -15,6 +15,16 @@ interface IPactoUsernameNFT {
     uint256 tokenId;
   }
 
+  /// @notice Packed controller record for an npub. Address and token id share one slot
+  /// @param evmAddress Active EVM controller
+  /// @param tokenId Linked ERC-721 token id, or zero when unclaimed
+  /// @param pendingAddress Pending recipient during address transfer, or zero
+  struct Membership {
+    address evmAddress;
+    uint64 tokenId;
+    address pendingAddress;
+  }
+
   /// @notice Emitted when a username is claimed for an npub
   event UsernameClaimed(bytes32 indexed npubHash, string name, address indexed evmAddress, uint256 indexed tokenId);
 
@@ -89,10 +99,18 @@ interface IPactoUsernameNFT {
   function npubOf(address _evmAddress) external view returns (bytes32 npubHash);
 
   /// @notice Returns eligibility data for sponsorship when member is the active controller
+  /// @dev Wraps `membership` and does not read the username
   /// @param member The candidate member address
   /// @return npubHash The npub hash or zero when not eligible
   /// @return tokenId The linked token id or zero when not eligible
   function eligibleMember(address member) external view returns (bytes32 npubHash, uint256 tokenId);
+
+  /// @notice Returns the packed membership for an active controller
+  /// @dev Reads the address-to-npub slot and the packed controller slot only
+  /// @param member The candidate member address
+  /// @return npubHash The npub hash, or zero when the address is not the active controller
+  /// @return tokenId The linked token id, or zero when the address is not the active controller
+  function membership(address member) external view returns (bytes32 npubHash, uint64 tokenId);
 
   /// @notice Returns whether an npub has a pending address transfer
   /// @param _npubHash The npub hash to lookup

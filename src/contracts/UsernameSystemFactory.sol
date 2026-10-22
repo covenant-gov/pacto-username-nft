@@ -9,7 +9,11 @@ import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 
+import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
+import {IGlobalSponsorPool} from 'interfaces/IGlobalSponsorPool.sol';
 import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
+import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
+import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 import {IUsernameSystemFactory} from 'interfaces/IUsernameSystemFactory.sol';
 
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
@@ -44,7 +48,17 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
     address _policy = address(new SponsorPolicyRegistry(owner));
     address _bootstrapPool = address(new BootstrapMintPool(_registry));
     address _bootstrapPolicy = address(new BootstrapClaimPolicy(_registry));
-    address _paymaster = address(new PactoGlobalPaymaster(entryPoint, _registry));
+    address _paymaster = address(
+      new PactoGlobalPaymaster(
+        entryPoint,
+        IPactoUsernameNFT(_nft),
+        ISponsorPolicy(_policy),
+        ISponsorPolicy(_bootstrapPolicy),
+        IGlobalSponsorPool(_pool),
+        IBootstrapMintPool(_bootstrapPool),
+        allowed7702Implementation
+      )
+    );
 
     _registry.initialize(
       IPactoProtocolRegistry.ProtocolAddresses({

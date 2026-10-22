@@ -1,17 +1,38 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
+import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
+import {IGlobalSponsorPool} from 'interfaces/IGlobalSponsorPool.sol';
+import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
+import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 
 /// @notice ERC-4337 paymaster for username NFT holders with modular action policy
 interface IPactoGlobalPaymaster {
   /// @notice Paymaster payload version
   function PAYMASTER_DATA_VERSION() external view returns (uint8 version);
 
-  /// @notice Protocol registry used to resolve live NFT, pools, and policies
-  function REGISTRY() external view returns (IPactoProtocolRegistry registry);
+  /// @notice Username NFT used for membership checks
+  /// @return usernameNft The username NFT
+  function USERNAME_NFT() external view returns (IPactoUsernameNFT usernameNft);
 
-  /// @notice Allowlisted EIP-7702 account implementation from the protocol registry
+  /// @notice Member-path sponsor policy
+  /// @return policy The member-path sponsor policy
+  function POLICY() external view returns (ISponsorPolicy policy);
+
+  /// @notice Bootstrap-claim sponsor policy
+  /// @return bootstrapPolicy The bootstrap-claim sponsor policy
+  function BOOTSTRAP_POLICY() external view returns (ISponsorPolicy bootstrapPolicy);
+
+  /// @notice Member-path sponsor pool
+  /// @return pool The member-path sponsor pool
+  function POOL() external view returns (IGlobalSponsorPool pool);
+
+  /// @notice Bootstrap-claim sponsor pool
+  /// @return bootstrapPool The bootstrap-claim sponsor pool
+  function BOOTSTRAP_POOL() external view returns (IBootstrapMintPool bootstrapPool);
+
+  /// @notice Allowlisted EIP-7702 account implementation
+  /// @return implementation The allowlisted EIP-7702 account implementation
   function ALLOWED_7702_IMPLEMENTATION() external view returns (address implementation);
 
   /// @notice Parsed global paymaster payload
@@ -64,7 +85,7 @@ interface IPactoGlobalPaymaster {
   /// @notice Thrown when BootstrapClaimPolicy rejects the call
   error GlobalPaymaster_BootstrapNotSponsorable();
 
-  /// @notice Thrown when eligibleMember fails or npubHash mismatches on the member path
+  /// @notice Thrown when the membership npub does not match paymaster data
   error GlobalPaymaster_IneligibleMember();
 
   /// @notice Thrown when SponsorPolicyRegistry rejects the call
