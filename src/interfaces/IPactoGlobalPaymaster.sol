@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
 import {IGlobalSponsorPool} from 'interfaces/IGlobalSponsorPool.sol';
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
 import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 
@@ -10,6 +11,10 @@ import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 interface IPactoGlobalPaymaster {
   /// @notice Paymaster payload version
   function PAYMASTER_DATA_VERSION() external view returns (uint8 version);
+
+  /// @notice Protocol registry that records this paymaster generation
+  /// @return registry The protocol registry
+  function REGISTRY() external view returns (IPactoProtocolRegistry registry);
 
   /// @notice Username NFT used for membership checks
   /// @return usernameNft The username NFT

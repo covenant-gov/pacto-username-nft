@@ -51,6 +51,7 @@ contract UnitUsernameSystemFactory is Test {
     assertEq(address(GlobalSponsorPool(payable(_factory.POOL())).REGISTRY()), address(_registry));
 
     PactoGlobalPaymaster _paymaster = PactoGlobalPaymaster(payable(_factory.PAYMASTER()));
+    assertEq(address(_paymaster.REGISTRY()), address(_registry));
     assertEq(address(_paymaster.USERNAME_NFT()), _factory.USERNAME_NFT());
     assertEq(address(_paymaster.POLICY()), _factory.POLICY());
     assertEq(address(_paymaster.BOOTSTRAP_POLICY()), _factory.BOOTSTRAP_POLICY());

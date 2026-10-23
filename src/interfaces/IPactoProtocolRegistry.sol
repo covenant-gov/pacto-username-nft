@@ -1,29 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-/// @notice Mutable protocol address book for alpha upgradeability
+/// @notice Protocol address book with atomic generation migration
 interface IPactoProtocolRegistry {
-  /// @notice Protocol address-book slots that can be updated via set
-  /// @param UsernameNft Username NFT used for membership and claims
-  /// @param Paymaster Global ERC-4337 paymaster
-  /// @param Pool Member-path sponsor pool
-  /// @param BootstrapPool Bootstrap-claim sponsor pool
-  /// @param Policy Member-path sponsor policy registry
-  /// @param BootstrapPolicy Bootstrap-claim sponsor policy
-  /// @param EntryPoint ERC-4337 EntryPoint v0.7
-  /// @param Allowed7702Implementation Allowlisted EIP-7702 account implementation
-  enum ProtocolComponent {
-    UsernameNft,
-    Paymaster,
-    Pool,
-    BootstrapPool,
-    Policy,
-    BootstrapPolicy,
-    EntryPoint,
-    Allowed7702Implementation
-  }
-
-  /// @notice Live protocol contract addresses
+  /// @notice Live protocol contract addresses for one coherent generation
   /// @param usernameNft Username NFT used for membership and claims
   /// @param paymaster Global ERC-4337 paymaster
   /// @param pool Member-path sponsor pool
@@ -31,7 +11,7 @@ interface IPactoProtocolRegistry {
   /// @param policy Member-path sponsor policy registry
   /// @param bootstrapPolicy Bootstrap-claim sponsor policy
   /// @param entryPoint ERC-4337 EntryPoint v0.7
-  /// @param allowed7702Implementation Allowlisted EIP-7702 account implementation (zero allowed)
+  /// @param allowed7702Implementation Allowlisted EIP-7702 account implementation
   struct ProtocolAddresses {
     address usernameNft;
     address paymaster;
@@ -46,8 +26,8 @@ interface IPactoProtocolRegistry {
   /// @notice Emitted when the installer writes the initial address book
   event ProtocolInitialized(ProtocolAddresses addresses);
 
-  /// @notice Emitted when any protocol address-book slot is updated
-  event ProtocolAddressUpdated(ProtocolComponent indexed component, address indexed addr);
+  /// @notice Emitted when the owner migrates every address-book slot atomically
+  event ProtocolMigrated(ProtocolAddresses addresses);
 
   /// @notice Thrown when a required address is zero
   error ProtocolRegistry_ZeroAddress();
@@ -58,8 +38,11 @@ interface IPactoProtocolRegistry {
   /// @notice Thrown when initialize is called more than once
   error ProtocolRegistry_AlreadyInitialized();
 
-  /// @notice Thrown when set receives an unrecognized component
-  error ProtocolRegistry_InvalidComponent();
+  /// @notice Thrown when migrate is called before initialize
+  error ProtocolRegistry_NotInitialized();
+
+  /// @notice Thrown when paymaster immutables do not match the address book
+  error ProtocolRegistry_IncoherentBundle();
 
   /// @notice Returns the one-time installer allowed to call initialize
   function INSTALLER() external view returns (address installerAddress);
@@ -95,8 +78,7 @@ interface IPactoProtocolRegistry {
   /// @param addresses The initial protocol addresses
   function initialize(ProtocolAddresses calldata addresses) external;
 
-  /// @notice Updates a single protocol address-book slot
-  /// @param component The slot to update
-  /// @param addr The new address (zero allowed only for Allowed7702Implementation)
-  function set(ProtocolComponent component, address addr) external;
+  /// @notice Atomically replaces every protocol address-book slot
+  /// @param addresses The next coherent generation
+  function migrate(ProtocolAddresses calldata addresses) external;
 }

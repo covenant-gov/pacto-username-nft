@@ -7,6 +7,7 @@ import {PackedUserOperation} from '@account-abstraction/interfaces/PackedUserOpe
 import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
 import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
 import {IGlobalSponsorPool} from 'interfaces/IGlobalSponsorPool.sol';
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
 import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 
@@ -14,6 +15,7 @@ import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 contract PactoGlobalPaymasterHarness is PactoGlobalPaymaster {
   /// @notice Deploys the harness with the same wiring as the production paymaster
   /// @param entryPoint The ERC-4337 EntryPoint v0.7
+  /// @param registry The protocol registry for this generation
   /// @param usernameNft The username NFT used for membership
   /// @param policy The member-path sponsor policy
   /// @param bootstrapPolicy The bootstrap-claim sponsor policy
@@ -22,13 +24,16 @@ contract PactoGlobalPaymasterHarness is PactoGlobalPaymaster {
   /// @param allowed7702 The allowlisted EIP-7702 account implementation
   constructor(
     IEntryPoint entryPoint,
+    IPactoProtocolRegistry registry,
     IPactoUsernameNFT usernameNft,
     ISponsorPolicy policy,
     ISponsorPolicy bootstrapPolicy,
     IGlobalSponsorPool pool,
     IBootstrapMintPool bootstrapPool,
     address allowed7702
-  ) PactoGlobalPaymaster(entryPoint, usernameNft, policy, bootstrapPolicy, pool, bootstrapPool, allowed7702) {}
+  )
+    PactoGlobalPaymaster(entryPoint, registry, usernameNft, policy, bootstrapPolicy, pool, bootstrapPool, allowed7702)
+  {}
 
   /// @notice Exposes internal paymaster validation for unit tests
   function exposedValidate(

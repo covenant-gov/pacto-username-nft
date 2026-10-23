@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
 import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
+import {IPactoGlobalPaymaster} from 'interfaces/IPactoGlobalPaymaster.sol';
 import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 
 import {Constants} from 'script/Constants.sol';
@@ -13,7 +15,7 @@ import {PolicyTargetResolver} from 'script/PolicyTargetResolver.sol';
 import {stdJson} from 'forge-std/StdJson.sol';
 import {console} from 'forge-std/console.sol';
 
-/// @notice Updates protocol registry slots and migrates NFT member policy selectors
+/// @notice Migrates the protocol registry to a coherent paymaster generation
 contract UpdateProtocolRegistry is DeploymentArtifacts {
   using stdJson for string;
 
@@ -21,37 +23,30 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
   bytes4 internal constant _CLAIM_ADDRESS_TRANSFER_SELECTOR = 0xbf010955;
   bytes4 internal constant _CANCEL_ADDRESS_TRANSFER_SELECTOR = 0xd88208dc;
 
-  /// @notice Optional registry slot updates from env / artifacts
-  /// @param usernameNft Replacement username NFT address (zero skips)
-  /// @param paymaster Replacement paymaster address (zero skips)
-  /// @param pool Replacement global sponsor pool address (zero skips)
-  /// @param bootstrapPool Replacement bootstrap mint pool address (zero skips)
-  /// @param policy Replacement member policy registry address (zero skips)
-  /// @param bootstrapPolicy Replacement bootstrap claim policy address (zero skips)
-  /// @param entryPoint Replacement EntryPoint address (zero skips)
-  /// @param allowed7702 Replacement EIP-7702 allowlist address when has7702Update
-  /// @param has7702Update Whether an EIP-7702 allowlist update was supplied
-  struct RegistryUpdates {
-    address usernameNft;
-    address paymaster;
-    address pool;
-    address bootstrapPool;
-    address policy;
-    address bootstrapPolicy;
-    address entryPoint;
-    address allowed7702;
-    bool has7702Update;
-  }
-
   function run() external {
     string memory _json = _readFullSystemJson();
     PactoProtocolRegistry _registry = PactoProtocolRegistry(_json.readAddress('.protocolRegistry'));
-    RegistryUpdates memory _updates = _loadUpdates();
-    _requireHasUpdates(_updates);
+    IPactoGlobalPaymaster _paymaster = IPactoGlobalPaymaster(vm.envAddress('PAYMASTER'));
+    IPactoProtocolRegistry.ProtocolAddresses memory _next = _addressesFromPaymaster(_paymaster);
+    if (address(_paymaster.REGISTRY()) != address(_registry)) revert PaymasterRegistryMismatch();
+
+    address _oldNft = _registry.usernameNft();
+    address _oldPolicy = _registry.policy();
 
     vm.startBroadcast();
     address _deployer = _broadcastDeployer();
-    _applyUpdates(_registry, _updates, _deployer);
+    _registry.migrate(_next);
+    if (_deployer == _registry.owner()) {
+      if (_next.usernameNft != _oldNft) {
+        _migrateMemberPolicySelectors(SponsorPolicyRegistry(_next.policy), _oldNft, _next.usernameNft);
+      }
+      if (_next.policy != _oldPolicy) {
+        Constants.ChainConfig memory _config = Constants.getConfig(block.chainid);
+        PolicySeeding.seedMemberPolicyV4(
+          SponsorPolicyRegistry(_next.policy), _next.usernameNft, PolicyTargetResolver.resolveFactoryTargets(_config)
+        );
+      }
+    }
     vm.stopBroadcast();
 
     _logRegistry(_registry);
@@ -68,64 +63,22 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     }
   }
 
-  /// @notice Loads optional update addresses from env and local deployment artifacts
-  function _loadUpdates() internal view returns (RegistryUpdates memory updates) {
-    updates.usernameNft = _resolveUsernameNft();
-    updates.paymaster = vm.envOr('PAYMASTER', address(0));
-    updates.pool = vm.envOr('POOL', address(0));
-    updates.bootstrapPool = vm.envOr('BOOTSTRAP_POOL', address(0));
-    updates.policy = _resolvePolicy();
-    updates.bootstrapPolicy = vm.envOr('BOOTSTRAP_POLICY', address(0));
-    updates.entryPoint = vm.envOr('ENTRY_POINT', address(0));
-    (updates.allowed7702, updates.has7702Update) = _resolveAllowed7702Update();
-  }
-
-  /// @notice Reverts when no registry update was requested
-  function _requireHasUpdates(RegistryUpdates memory updates) internal pure {
-    require(
-      updates.usernameNft != address(0) || updates.paymaster != address(0) || updates.pool != address(0)
-        || updates.bootstrapPool != address(0) || updates.policy != address(0) || updates.bootstrapPolicy != address(0)
-        || updates.entryPoint != address(0) || updates.has7702Update,
-      'update: no registry changes'
-    );
-  }
-
-  /// @notice Applies owner-gated registry updates during broadcast
-  function _applyUpdates(PactoProtocolRegistry registry, RegistryUpdates memory updates, address deployer) internal {
-    address _oldNft = registry.usernameNft();
-    if (updates.usernameNft != address(0) && updates.usernameNft != _oldNft) {
-      registry.set(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, updates.usernameNft);
-      if (deployer == registry.owner()) {
-        _migrateMemberPolicySelectors(SponsorPolicyRegistry(registry.policy()), _oldNft, updates.usernameNft);
-      }
-    }
-    if (updates.paymaster != address(0)) {
-      registry.set(IPactoProtocolRegistry.ProtocolComponent.Paymaster, updates.paymaster);
-    }
-    if (updates.pool != address(0)) registry.set(IPactoProtocolRegistry.ProtocolComponent.Pool, updates.pool);
-    if (updates.bootstrapPool != address(0)) {
-      registry.set(IPactoProtocolRegistry.ProtocolComponent.BootstrapPool, updates.bootstrapPool);
-    }
-    if (updates.policy != address(0) && updates.policy != registry.policy()) {
-      registry.set(IPactoProtocolRegistry.ProtocolComponent.Policy, updates.policy);
-      if (deployer == registry.owner()) {
-        Constants.ChainConfig memory _config = Constants.getConfig(block.chainid);
-        PolicySeeding.seedMemberPolicyV4(
-          SponsorPolicyRegistry(updates.policy),
-          registry.usernameNft(),
-          PolicyTargetResolver.resolveFactoryTargets(_config)
-        );
-      }
-    }
-    if (updates.bootstrapPolicy != address(0)) {
-      registry.set(IPactoProtocolRegistry.ProtocolComponent.BootstrapPolicy, updates.bootstrapPolicy);
-    }
-    if (updates.entryPoint != address(0)) {
-      registry.set(IPactoProtocolRegistry.ProtocolComponent.EntryPoint, updates.entryPoint);
-    }
-    if (updates.has7702Update) {
-      registry.set(IPactoProtocolRegistry.ProtocolComponent.Allowed7702Implementation, updates.allowed7702);
-    }
+  /// @notice Copies the next address book from a deployed paymaster's immutables
+  /// @param paymaster The next-generation paymaster
+  /// @return addresses The coherent protocol addresses
+  function _addressesFromPaymaster(IPactoGlobalPaymaster paymaster)
+    internal
+    view
+    returns (IPactoProtocolRegistry.ProtocolAddresses memory addresses)
+  {
+    addresses.usernameNft = address(paymaster.USERNAME_NFT());
+    addresses.paymaster = address(paymaster);
+    addresses.pool = address(paymaster.POOL());
+    addresses.bootstrapPool = address(paymaster.BOOTSTRAP_POOL());
+    addresses.policy = address(paymaster.POLICY());
+    addresses.bootstrapPolicy = address(paymaster.BOOTSTRAP_POLICY());
+    addresses.entryPoint = address(PactoGlobalPaymaster(payable(address(paymaster))).entryPoint());
+    addresses.allowed7702Implementation = paymaster.ALLOWED_7702_IMPLEMENTATION();
   }
 
   /// @notice Logs the live registry slots
@@ -163,42 +116,6 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     artifact.deployer = deployer;
   }
 
-  /// @notice Resolves the replacement username NFT from env or username-nft.json
-  function _resolveUsernameNft() internal view returns (address usernameNft) {
-    usernameNft = vm.envOr('USERNAME_NFT', address(0));
-    if (usernameNft != address(0)) return usernameNft;
-
-    try vm.readFile(_deploymentJsonPath('username-nft.json')) returns (string memory nftJson) {
-      usernameNft = nftJson.readAddress('.pactoUsernameNft');
-    } catch {
-      usernameNft = address(0);
-    }
-  }
-
-  /// @notice Resolves the replacement member policy from env or sponsor-policy-registry.json
-  function _resolvePolicy() internal view returns (address policy) {
-    policy = vm.envOr('POLICY', address(0));
-    if (policy != address(0)) return policy;
-
-    try vm.readFile(_deploymentJsonPath('sponsor-policy-registry.json')) returns (string memory policyJson) {
-      policy = policyJson.readAddress('.sponsorPolicyRegistry');
-    } catch {
-      policy = address(0);
-    }
-  }
-
-  /// @notice Resolves Allowed7702 from ALLOWED_7702 env or eip7702-account.json
-  /// @return allowed7702 The allowlist address (may be zero when clearing via env)
-  /// @return hasUpdate True when an update should be applied
-  function _resolveAllowed7702Update() internal view returns (address allowed7702, bool hasUpdate) {
-    if (vm.envExists('ALLOWED_7702')) {
-      return (vm.envAddress('ALLOWED_7702'), true);
-    }
-    allowed7702 = _readPactoSimple7702FromArtifact();
-    if (allowed7702 != address(0)) return (allowed7702, true);
-    return (address(0), false);
-  }
-
   /// @notice Migrates member-path NFT sponsorship from legacy selectors or targets to a new NFT
   function _migrateMemberPolicySelectors(SponsorPolicyRegistry policy, address oldNft, address newNft) internal {
     if (oldNft != address(0)) {
@@ -226,4 +143,7 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
 
   /// @notice Thrown when deployments/<chainId>/full-system.json is missing
   error MissingDeploymentArtifact(string path);
+
+  /// @notice Thrown when the paymaster is bound to a different registry
+  error PaymasterRegistryMismatch();
 }

@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {Ownable2Step} from '@openzeppelin/contracts/access/Ownable2Step.sol';
+import {IPactoGlobalPaymaster} from 'interfaces/IPactoGlobalPaymaster.sol';
 import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
+
+/// @notice EntryPoint getter shared by BasePaymaster and test mocks
+interface IPaymasterEntryPoint {
+  /// @notice Returns the EntryPoint this paymaster is bound to
+  function entryPoint() external view returns (IEntryPoint entryPoint);
+}
 
 /// @title PactoProtocolRegistry
 /// @notice Owner-gated protocol address book with a one-time installer initialize
@@ -51,37 +59,21 @@ contract PactoProtocolRegistry is IPactoProtocolRegistry, Ownable2Step {
     if (msg.sender != INSTALLER) revert ProtocolRegistry_NotInstaller();
     if (initialized) revert ProtocolRegistry_AlreadyInitialized();
     _requireCoreAddresses(addresses);
+    _requireBundleCoherent(addresses);
 
     initialized = true;
-    usernameNft = addresses.usernameNft;
-    paymaster = addresses.paymaster;
-    pool = addresses.pool;
-    bootstrapPool = addresses.bootstrapPool;
-    policy = addresses.policy;
-    bootstrapPolicy = addresses.bootstrapPolicy;
-    entryPoint = addresses.entryPoint;
-    allowed7702Implementation = addresses.allowed7702Implementation;
-
+    _writeAddresses(addresses);
     emit ProtocolInitialized(addresses);
   }
 
   /// @inheritdoc IPactoProtocolRegistry
-  function set(ProtocolComponent component, address addr) external onlyOwner {
-    if (component != ProtocolComponent.Allowed7702Implementation && addr == address(0)) {
-      revert ProtocolRegistry_ZeroAddress();
-    }
+  function migrate(ProtocolAddresses calldata addresses) external onlyOwner {
+    if (!initialized) revert ProtocolRegistry_NotInitialized();
+    _requireCoreAddresses(addresses);
+    _requireBundleCoherent(addresses);
 
-    if (component == ProtocolComponent.UsernameNft) usernameNft = addr;
-    else if (component == ProtocolComponent.Paymaster) paymaster = addr;
-    else if (component == ProtocolComponent.Pool) pool = addr;
-    else if (component == ProtocolComponent.BootstrapPool) bootstrapPool = addr;
-    else if (component == ProtocolComponent.Policy) policy = addr;
-    else if (component == ProtocolComponent.BootstrapPolicy) bootstrapPolicy = addr;
-    else if (component == ProtocolComponent.EntryPoint) entryPoint = addr;
-    else if (component == ProtocolComponent.Allowed7702Implementation) allowed7702Implementation = addr;
-    else revert ProtocolRegistry_InvalidComponent();
-
-    emit ProtocolAddressUpdated(component, addr);
+    _writeAddresses(addresses);
+    emit ProtocolMigrated(addresses);
   }
 
   /// @notice Reverts when a required protocol address is zero
@@ -92,5 +84,33 @@ contract PactoProtocolRegistry is IPactoProtocolRegistry, Ownable2Step {
         || addresses.bootstrapPool == address(0) || addresses.policy == address(0)
         || addresses.bootstrapPolicy == address(0) || addresses.entryPoint == address(0)
     ) revert ProtocolRegistry_ZeroAddress();
+  }
+
+  /// @notice Reverts when the paymaster immutables do not match the address book
+  /// @param addresses The candidate protocol addresses
+  function _requireBundleCoherent(ProtocolAddresses calldata addresses) internal view {
+    IPactoGlobalPaymaster _paymaster = IPactoGlobalPaymaster(addresses.paymaster);
+    if (
+      address(_paymaster.REGISTRY()) != address(this) || address(_paymaster.USERNAME_NFT()) != addresses.usernameNft
+        || address(_paymaster.POLICY()) != addresses.policy
+        || address(_paymaster.BOOTSTRAP_POLICY()) != addresses.bootstrapPolicy
+        || address(_paymaster.POOL()) != addresses.pool
+        || address(_paymaster.BOOTSTRAP_POOL()) != addresses.bootstrapPool
+        || address(IPaymasterEntryPoint(addresses.paymaster).entryPoint()) != addresses.entryPoint
+        || _paymaster.ALLOWED_7702_IMPLEMENTATION() != addresses.allowed7702Implementation
+    ) revert ProtocolRegistry_IncoherentBundle();
+  }
+
+  /// @notice Writes every address-book slot from a generation
+  /// @param addresses The protocol addresses to store
+  function _writeAddresses(ProtocolAddresses calldata addresses) internal {
+    usernameNft = addresses.usernameNft;
+    paymaster = addresses.paymaster;
+    pool = addresses.pool;
+    bootstrapPool = addresses.bootstrapPool;
+    policy = addresses.policy;
+    bootstrapPolicy = addresses.bootstrapPolicy;
+    entryPoint = addresses.entryPoint;
+    allowed7702Implementation = addresses.allowed7702Implementation;
   }
 }

@@ -58,7 +58,7 @@ contract IntegrationBase is ProtocolRegistryTestBase {
     bootstrapPolicy = new BootstrapClaimPolicy(nft);
 
     paymaster = new PactoGlobalPaymasterHarness(
-      IEntryPoint(address(entryPoint)), nft, policy, bootstrapPolicy, pool, bootstrapPool, allowed7702
+      IEntryPoint(address(entryPoint)), registry, nft, policy, bootstrapPolicy, pool, bootstrapPool, allowed7702
     );
 
     _initializeRegistry(

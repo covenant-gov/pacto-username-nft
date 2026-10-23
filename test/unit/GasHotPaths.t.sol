@@ -75,7 +75,7 @@ contract UnitGasHotPaths is ProtocolRegistryTestBase {
     _policy = new SponsorPolicyRegistry(_owner);
     _bootstrapPolicy = new BootstrapClaimPolicy(_nft);
     _paymaster = new PactoGlobalPaymasterHarness(
-      IEntryPoint(address(_entryPoint)), _nft, _policy, _bootstrapPolicy, _pool, _bootstrapPool, _allowed7702
+      IEntryPoint(address(_entryPoint)), _registry, _nft, _policy, _bootstrapPolicy, _pool, _bootstrapPool, _allowed7702
     );
 
     _initializeRegistry(

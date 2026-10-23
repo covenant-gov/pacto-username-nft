@@ -7,6 +7,7 @@ import {UserOpCalldataLib} from 'contracts/utils/UserOpCalldataLib.sol';
 import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
 import {IGlobalSponsorPool} from 'interfaces/IGlobalSponsorPool.sol';
 import {IPactoGlobalPaymaster} from 'interfaces/IPactoGlobalPaymaster.sol';
+import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
 import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 
@@ -33,6 +34,9 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
   bytes1 internal constant _MEMBER_CONTEXT = 0x01;
 
   /// @inheritdoc IPactoGlobalPaymaster
+  IPactoProtocolRegistry public immutable REGISTRY;
+
+  /// @inheritdoc IPactoGlobalPaymaster
   IPactoUsernameNFT public immutable USERNAME_NFT;
 
   /// @inheritdoc IPactoGlobalPaymaster
@@ -52,6 +56,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
 
   /// @notice Initializes the global paymaster
   /// @param entryPoint The ERC-4337 EntryPoint v0.7
+  /// @param registry The protocol registry for this generation
   /// @param usernameNft The username NFT used for membership
   /// @param policy The member-path sponsor policy
   /// @param bootstrapPolicy The bootstrap-claim sponsor policy
@@ -60,6 +65,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
   /// @param allowed7702 The allowlisted EIP-7702 account implementation
   constructor(
     IEntryPoint entryPoint,
+    IPactoProtocolRegistry registry,
     IPactoUsernameNFT usernameNft,
     ISponsorPolicy policy,
     ISponsorPolicy bootstrapPolicy,
@@ -68,11 +74,12 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     address allowed7702
   ) BasePaymaster(entryPoint) {
     if (
-      address(entryPoint) == address(0) || address(usernameNft) == address(0) || address(policy) == address(0)
-        || address(bootstrapPolicy) == address(0) || address(pool) == address(0) || address(bootstrapPool) == address(0)
-        || allowed7702 == address(0)
+      address(entryPoint) == address(0) || address(registry) == address(0) || address(usernameNft) == address(0)
+        || address(policy) == address(0) || address(bootstrapPolicy) == address(0) || address(pool) == address(0)
+        || address(bootstrapPool) == address(0) || allowed7702 == address(0)
     ) revert GlobalPaymaster_ZeroAddress();
 
+    REGISTRY = registry;
     USERNAME_NFT = usernameNft;
     POLICY = policy;
     BOOTSTRAP_POLICY = bootstrapPolicy;

@@ -2,7 +2,11 @@
 pragma solidity 0.8.30;
 
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
+import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
+import {IGlobalSponsorPool} from 'interfaces/IGlobalSponsorPool.sol';
 import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
+import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
+import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 import {IUsernameSystemFactory} from 'interfaces/IUsernameSystemFactory.sol';
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -70,7 +74,20 @@ contract VerifyDeploy is Script {
     _verify(d.policy, _POLICY, chain, abi.encode(d.owner), '');
     _verify(d.bootstrapPolicy, _BOOTSTRAP_POLICY, chain, abi.encode(IPactoProtocolRegistry(d.registry)), '');
     _verify(
-      d.paymaster, _PAYMASTER, chain, abi.encode(IEntryPoint(d.entryPoint), IPactoProtocolRegistry(d.registry)), ''
+      d.paymaster,
+      _PAYMASTER,
+      chain,
+      abi.encode(
+        IEntryPoint(d.entryPoint),
+        IPactoProtocolRegistry(d.registry),
+        IPactoUsernameNFT(d.nft),
+        ISponsorPolicy(d.policy),
+        ISponsorPolicy(d.bootstrapPolicy),
+        IGlobalSponsorPool(d.pool),
+        IBootstrapMintPool(d.bootstrapPool),
+        d.allowed7702
+      ),
+      ''
     );
   }
 

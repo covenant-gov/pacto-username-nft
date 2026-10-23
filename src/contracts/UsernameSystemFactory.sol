@@ -51,6 +51,7 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
     address _paymaster = address(
       new PactoGlobalPaymaster(
         entryPoint,
+        _registry,
         IPactoUsernameNFT(_nft),
         ISponsorPolicy(_policy),
         ISponsorPolicy(_bootstrapPolicy),
