@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {ShareVault} from 'contracts/abstracts/ShareVault.sol';
 import {ETHTransfer} from 'contracts/utils/ETHTransfer.sol';
 import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
 import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
@@ -8,18 +9,9 @@ import {ISponsorCommon} from 'interfaces/ISponsorCommon.sol';
 
 /// @title BootstrapMintPool
 /// @notice Protocol ETH vault for sponsored username NFT bootstrap mint gas
-contract BootstrapMintPool is IBootstrapMintPool {
+contract BootstrapMintPool is IBootstrapMintPool, ShareVault {
   /// @notice Protocol registry used to resolve the live paymaster
   IPactoProtocolRegistry public immutable REGISTRY;
-
-  /// @inheritdoc IBootstrapMintPool
-  uint256 public totalShares;
-
-  /// @inheritdoc IBootstrapMintPool
-  mapping(address sponsor => uint256 shares) public sponsorShares;
-
-  /// @inheritdoc IBootstrapMintPool
-  uint256 public spendablePoolWei;
 
   /// @notice Initializes the bootstrap mint pool
   /// @param registry The protocol registry
@@ -82,9 +74,7 @@ contract BootstrapMintPool is IBootstrapMintPool {
   function spendGas(uint256 amount) external {
     address _paymaster = paymaster();
     if (msg.sender != _paymaster) revert ISponsorCommon.Sponsor_NotPaymaster();
-    if (amount > spendablePoolWei) revert ISponsorCommon.Sponsor_InsufficientBalance();
-
-    spendablePoolWei -= amount;
+    _debitSpendable(amount);
     ETHTransfer.sendEth(_paymaster, amount);
 
     emit GasSpent(msg.sender, amount);
@@ -93,21 +83,7 @@ contract BootstrapMintPool is IBootstrapMintPool {
   /// @notice Credits pro-rata sponsor shares for a depositor
   /// @param sponsor The account receiving shares
   function _deposit(address sponsor) internal {
-    if (msg.value == 0) revert ISponsorCommon.Sponsor_ZeroAmount();
-
-    uint256 _shares;
-    uint256 _balanceBefore = spendablePoolWei;
-
-    if (totalShares != 0 && _balanceBefore != 0) {
-      _shares = (msg.value * totalShares) / _balanceBefore;
-    } else {
-      _shares = msg.value;
-    }
-
-    sponsorShares[sponsor] += _shares;
-    totalShares += _shares;
-    spendablePoolWei = _balanceBefore + msg.value;
-
+    uint256 _shares = _mintDepositShares(sponsor, msg.value);
     emit Deposited(sponsor, msg.value, _shares);
   }
 }

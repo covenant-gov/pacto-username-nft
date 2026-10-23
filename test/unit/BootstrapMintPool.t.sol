@@ -8,7 +8,7 @@ import {ProtocolRegistryTestBase} from 'test/helpers/ProtocolRegistryTestBase.so
 
 contract UnitBootstrapMintPool is ProtocolRegistryTestBase {
   address internal _owner = makeAddr('owner');
-  address internal _paymaster = makeAddr('paymaster');
+  address internal _paymaster;
   address internal _depositor = makeAddr('depositor');
 
   PactoProtocolRegistry internal _registry;
@@ -17,16 +17,19 @@ contract UnitBootstrapMintPool is ProtocolRegistryTestBase {
   function setUp() external {
     _registry = new PactoProtocolRegistry(_owner, address(this));
     _pool = new BootstrapMintPool(_registry);
+    address _nft = makeAddr('nft');
+    address _memberPool = makeAddr('pool');
+    address _policy = makeAddr('policy');
+    address _bootstrapPolicy = makeAddr('bootstrapPolicy');
+    address _entryPoint = makeAddr('entryPoint');
+    address _allowed7702 = makeAddr('allowed7702');
+    _paymaster = address(
+      _deployMockPaymaster(
+        _registry, _nft, _memberPool, address(_pool), _policy, _bootstrapPolicy, _entryPoint, _allowed7702
+      )
+    );
     _initializeRegistry(
-      _registry,
-      makeAddr('nft'),
-      _paymaster,
-      makeAddr('pool'),
-      address(_pool),
-      makeAddr('policy'),
-      makeAddr('bootstrapPolicy'),
-      makeAddr('entryPoint'),
-      address(0)
+      _registry, _nft, _paymaster, _memberPool, address(_pool), _policy, _bootstrapPolicy, _entryPoint, _allowed7702
     );
   }
 

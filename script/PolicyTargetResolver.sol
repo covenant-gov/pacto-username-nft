@@ -13,11 +13,9 @@ library PolicyTargetResolver {
   /// @notice Returns factory targets with env overrides applied
   /// @param config The chain deployment configuration
   /// @return targets The resolved factory addresses
-  function resolveFactoryTargets(Constants.ChainConfig memory config)
-    internal
-    view
-    returns (PolicySeeding.FactoryTargets memory targets)
-  {
+  function resolveFactoryTargets(
+    Constants.ChainConfig memory config
+  ) internal view returns (PolicySeeding.FactoryTargets memory targets) {
     targets.navePirataFactory = _VM.envOr('NAVE_PIRATA_FACTORY', config.navePirataFactory);
     targets.squadSponsorFactory = _VM.envOr('SQUAD_SPONSOR_FACTORY', config.squadSponsorFactory);
     targets.safeProxyFactory = _VM.envOr('SAFE_PROXY_FACTORY', config.safeProxyFactory);

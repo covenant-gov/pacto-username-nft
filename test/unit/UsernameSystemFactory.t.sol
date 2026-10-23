@@ -2,8 +2,10 @@
 pragma solidity 0.8.30;
 
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
+import {BootstrapClaimPolicy} from 'contracts/BootstrapClaimPolicy.sol';
 import {BootstrapMintPool} from 'contracts/BootstrapMintPool.sol';
 import {GlobalSponsorPool} from 'contracts/GlobalSponsorPool.sol';
+import {PactoGlobalPaymaster} from 'contracts/PactoGlobalPaymaster.sol';
 import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {UsernameSystemFactory} from 'contracts/UsernameSystemFactory.sol';
 import {Test} from 'forge-std/Test.sol';
@@ -43,9 +45,32 @@ contract UnitUsernameSystemFactory is Test {
     assertEq(_registry.bootstrapPolicy(), _factory.BOOTSTRAP_POLICY());
     assertEq(_registry.entryPoint(), address(_entryPoint));
     assertEq(_registry.allowed7702Implementation(), _allowed7702);
+    assertTrue(_registry.eip7702Enabled());
 
     assertEq(GlobalSponsorPool(payable(_factory.POOL())).paymaster(), _factory.PAYMASTER());
     assertEq(BootstrapMintPool(payable(_factory.BOOTSTRAP_POOL())).paymaster(), _factory.PAYMASTER());
     assertEq(address(GlobalSponsorPool(payable(_factory.POOL())).REGISTRY()), address(_registry));
+
+    PactoGlobalPaymaster _paymaster = PactoGlobalPaymaster(payable(_factory.PAYMASTER()));
+    assertEq(address(_paymaster.REGISTRY()), address(_registry));
+    assertEq(address(_paymaster.USERNAME_NFT()), _factory.USERNAME_NFT());
+    assertEq(address(_paymaster.POLICY()), _factory.POLICY());
+    assertEq(address(_paymaster.BOOTSTRAP_POLICY()), _factory.BOOTSTRAP_POLICY());
+    assertEq(address(_paymaster.POOL()), _factory.POOL());
+    assertEq(address(_paymaster.BOOTSTRAP_POOL()), _factory.BOOTSTRAP_POOL());
+    assertEq(_paymaster.ALLOWED_7702_IMPLEMENTATION(), _allowed7702);
+    assertEq(address(BootstrapClaimPolicy(_factory.BOOTSTRAP_POLICY()).USERNAME_NFT()), _factory.USERNAME_NFT());
+  }
+
+  function test_Constructor_WhenAllowed7702IsZeroDisablesEip7702() external {
+    UsernameSystemFactory _disabledFactory =
+      new UsernameSystemFactory(IEntryPoint(address(_entryPoint)), _owner, address(0));
+    PactoProtocolRegistry _registry = PactoProtocolRegistry(address(_disabledFactory.REGISTRY()));
+    PactoGlobalPaymaster _paymaster = PactoGlobalPaymaster(payable(_disabledFactory.PAYMASTER()));
+
+    assertFalse(_registry.eip7702Enabled());
+    assertEq(_registry.allowed7702Implementation(), address(0));
+    assertEq(_paymaster.ALLOWED_7702_IMPLEMENTATION(), address(0));
+    assertEq(address(_paymaster.REGISTRY()), address(_registry));
   }
 }

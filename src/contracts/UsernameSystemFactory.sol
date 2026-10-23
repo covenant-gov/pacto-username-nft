@@ -9,7 +9,11 @@ import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {PactoUsernameNFT} from 'contracts/PactoUsernameNFT.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
 
+import {IBootstrapMintPool} from 'interfaces/IBootstrapMintPool.sol';
+import {IGlobalSponsorPool} from 'interfaces/IGlobalSponsorPool.sol';
 import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
+import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
+import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 import {IUsernameSystemFactory} from 'interfaces/IUsernameSystemFactory.sol';
 
 import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
@@ -32,7 +36,7 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
   /// @notice Initializes and wires the username sponsorship system
   /// @param entryPoint The ERC-4337 EntryPoint v0.7
   /// @param owner The protocol owner for admin functions
-  /// @param allowed7702Implementation The allowlisted EIP-7702 account implementation
+  /// @param allowed7702Implementation The allowlisted EIP-7702 account implementation; zero disables 7702
   constructor(IEntryPoint entryPoint, address owner, address allowed7702Implementation) {
     if (entryPoint == IEntryPoint(address(0)) || owner == address(0)) revert Factory_ZeroAddress();
 
@@ -40,11 +44,22 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
     REGISTRY = _registry;
 
     address _pool = address(new GlobalSponsorPool(_registry));
+    address _bootstrapPool = address(new BootstrapMintPool(_registry));
     address _nft = address(new PactoUsernameNFT());
     address _policy = address(new SponsorPolicyRegistry(owner));
-    address _bootstrapPool = address(new BootstrapMintPool(_registry));
-    address _bootstrapPolicy = address(new BootstrapClaimPolicy(_registry));
-    address _paymaster = address(new PactoGlobalPaymaster(entryPoint, _registry));
+    address _bootstrapPolicy = address(new BootstrapClaimPolicy(IPactoUsernameNFT(_nft)));
+    address _paymaster = address(
+      new PactoGlobalPaymaster(
+        entryPoint,
+        _registry,
+        IPactoUsernameNFT(_nft),
+        ISponsorPolicy(_policy),
+        ISponsorPolicy(_bootstrapPolicy),
+        IGlobalSponsorPool(_pool),
+        IBootstrapMintPool(_bootstrapPool),
+        allowed7702Implementation
+      )
+    );
 
     _registry.initialize(
       IPactoProtocolRegistry.ProtocolAddresses({
@@ -55,7 +70,8 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
         policy: _policy,
         bootstrapPolicy: _bootstrapPolicy,
         entryPoint: address(entryPoint),
-        allowed7702Implementation: allowed7702Implementation
+        allowed7702Implementation: allowed7702Implementation,
+        eip7702Enabled: allowed7702Implementation != address(0)
       })
     );
   }

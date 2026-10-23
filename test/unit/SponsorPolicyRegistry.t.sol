@@ -3,8 +3,8 @@ pragma solidity 0.8.30;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SponsorPolicyRegistry} from 'contracts/SponsorPolicyRegistry.sol';
-import {ISponsorPolicyRegistry} from 'interfaces/ISponsorPolicyRegistry.sol';
 import {Test} from 'forge-std/Test.sol';
+import {ISponsorPolicyRegistry} from 'interfaces/ISponsorPolicyRegistry.sol';
 
 contract UnitSponsorPolicyRegistry is Test {
   address internal _owner = makeAddr('owner');
@@ -59,12 +59,39 @@ contract UnitSponsorPolicyRegistry is Test {
     assertFalse(_policy.isSponsorable(_module, hex'12345678', address(0), 0));
   }
 
+  function test_IsSponsorable_WhenIndexedModuleTopHatMissFallsThroughToContract() external {
+    _authorizeFactory();
+
+    address[] memory _modules = new address[](1);
+    _modules[0] = _module;
+
+    vm.prank(_factory);
+    _policy.registerModulesForTopHat(_TOP_HAT_ID, _modules);
+
+    vm.prank(_owner);
+    _policy.registerTarget(_module);
+
+    assertTrue(_policy.isSponsorable(_module, hex'12345678', address(0), 0));
+  }
+
+  function test_IsSponsorable_WhenIndexedModuleIsAlsoContractAllowed() external {
+    _authorizeFactory();
+    _registerTopHatWithModule();
+
+    vm.prank(_owner);
+    _policy.registerTarget(_module);
+
+    assertTrue(_policy.isSponsorable(_module, hex'12345678', address(0), 0));
+  }
+
   function test_IsSponsorable_WhenNothingIsRegistered() external view {
     assertFalse(_policy.isSponsorable(_target, hex'12345678', address(0), 0));
   }
 
   function test_RegisterTopHat_WhenCallerIsUnauthorized() external {
-    vm.expectRevert(abi.encodeWithSelector(ISponsorPolicyRegistry.SponsorPolicyRegistry_UnauthorizedRegistrar.selector, _other));
+    vm.expectRevert(
+      abi.encodeWithSelector(ISponsorPolicyRegistry.SponsorPolicyRegistry_UnauthorizedRegistrar.selector, _other)
+    );
     vm.prank(_other);
     _policy.registerTopHat(_TOP_HAT_ID);
   }

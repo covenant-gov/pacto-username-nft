@@ -54,6 +54,7 @@ abstract contract DeploymentArtifacts is Script {
   /// @notice Addresses and metadata written to full-system.json
   /// @param entryPoint The ERC-4337 EntryPoint
   /// @param allowed7702Implementation The allowlisted EIP-7702 account implementation
+  /// @param eip7702Enabled Whether EIP-7702 delegated senders are accepted
   /// @param protocolRegistry The protocol address book
   /// @param usernameSystemFactory The username system factory
   /// @param pactoUsernameNft The username NFT
@@ -68,6 +69,7 @@ abstract contract DeploymentArtifacts is Script {
   struct FullSystemArtifact {
     address entryPoint;
     address allowed7702Implementation;
+    bool eip7702Enabled;
     address protocolRegistry;
     address usernameSystemFactory;
     address pactoUsernameNft;
@@ -90,6 +92,7 @@ abstract contract DeploymentArtifacts is Script {
     vm.serializeUint(_key, 'chainId', block.chainid);
     vm.serializeAddress(_key, 'entryPoint', artifact.entryPoint);
     vm.serializeAddress(_key, 'allowed7702Implementation', artifact.allowed7702Implementation);
+    vm.serializeBool(_key, 'eip7702Enabled', artifact.eip7702Enabled);
     vm.serializeAddress(_key, 'protocolRegistry', artifact.protocolRegistry);
     vm.serializeAddress(_key, 'usernameSystemFactory', artifact.usernameSystemFactory);
     vm.serializeAddress(_key, 'pactoUsernameNft', artifact.pactoUsernameNft);

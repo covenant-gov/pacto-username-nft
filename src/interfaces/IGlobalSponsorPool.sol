@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {IShareVault} from 'interfaces/IShareVault.sol';
+
 /// @notice Protocol-wide ETH vault for global username sponsorship
-interface IGlobalSponsorPool {
+interface IGlobalSponsorPool is IShareVault {
   /// @notice Emitted when ETH is deposited into the pool
   event Deposited(address indexed sponsor, uint256 amount, uint256 shares);
 
@@ -14,17 +16,6 @@ interface IGlobalSponsorPool {
 
   /// @notice Returns the live paymaster address from the protocol registry
   function paymaster() external view returns (address paymasterAddress);
-
-  /// @notice Returns total sponsor shares outstanding
-  function totalShares() external view returns (uint256 shares);
-
-  /// @notice Returns sponsor shares for an account
-  /// @param sponsor The depositor address
-  /// @return shares The sponsor share balance
-  function sponsorShares(address sponsor) external view returns (uint256 shares);
-
-  /// @notice Returns the pool wei available for sponsorship
-  function spendablePoolWei() external view returns (uint256 amount);
 
   /// @notice Returns withdrawable wei for a sponsor
   /// @param sponsor The depositor address

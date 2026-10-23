@@ -3,7 +3,7 @@
 Unique usernames for [Pacto](https://github.com/covenant-gov/pacto-app), keyed by Nostr npub, with **global fallback gas sponsorship** for app on-chain actions.
 
 - **Identity:** `PactoUsernameNFT` — one npub → one `UsernameRecord` (name + EVM controller); EIP-712 claim; 2-step address rotation
-- **Registry:** `PactoProtocolRegistry` — mutable alpha address book for NFT / paymaster / pools / policies
+- **Registry:** `PactoProtocolRegistry` — generation pointer; owner `migrate`s a coherent paymaster bundle; `disableEip7702` kill switch
 - **Sponsorship:** `PactoGlobalPaymaster` + `GlobalSponsorPool` + modular `SponsorPolicyRegistry`
 - **Deploy:** `UsernameSystemFactory` chain singleton
 
@@ -48,33 +48,32 @@ pnpm deploy:arbitrum
 # Re-verify full stack from deployments/<chainId>/full-system.json (fresh DeployUsernameSystem only)
 pnpm verify:sepolia
 
-# After NFT / SPR pointer swaps: verify only those contracts (avoid verify:sepolia — live
-# registry/factory bytecode may lag Ownable2Step / NFT constructor source)
+# After a generation migrate: verify the new paymaster (and any newly deployed deps)
 pnpm verify:upgrades:sepolia
 
 # After a real deploy: EntryPoint deposit + paymaster stake (needs live full-system.json)
 pnpm fund:paymaster:sepolia
 
-# Alpha: deploy a replacement NFT, then point the protocol registry at it
+# Alpha: deploy a replacement NFT, construct a new paymaster with it, then migrate
 pnpm deploy:nft:sepolia
-pnpm update:registry:sepolia
+PAYMASTER=<new-paymaster> pnpm update:registry:sepolia
 
-# UN-1 (AA epic): set Allowed7702 from deployments/<chainId>/eip7702-account.json
-# Do NOT run full-system deploy — keep live protocolRegistry for squad SS-3
-pnpm update:registry:sepolia
+# UN-1 (AA epic): construct a paymaster with the 7702 impl from
+# deployments/<chainId>/eip7702-account.json, then migrate. Do NOT run full-system
+# deploy — keep live protocolRegistry for squad SS-3
+PAYMASTER=<new-paymaster> pnpm update:registry:sepolia
 
-# Optional: Ownable2Step SponsorPolicyRegistry swap (no full redeploy)
-pnpm deploy:policy:sepolia
-pnpm migrate:policy:v4:sepolia   # seed v4 targets + authorize navePirataFactory
-pnpm update:registry:sepolia     # POLICY from sponsor-policy-registry.json
+# In-place policy allowlist edits do not need migrate. Swapping the policy contract
+# requires a new paymaster + PAYMASTER=<new-paymaster> pnpm update:registry:sepolia
 ```
 
-Verify EIP-7702 allowlist after UN-1:
+Verify EIP-7702 allowlist and kill switch:
 
 ```bash
 cast call $PROTOCOL_REGISTRY 'allowed7702Implementation()(address)' --rpc-url $SEPOLIA_RPC
+cast call $PROTOCOL_REGISTRY 'eip7702Enabled()(bool)' --rpc-url $SEPOLIA_RPC
 cast call $GLOBAL_PM 'ALLOWED_7702_IMPLEMENTATION()(address)' --rpc-url $SEPOLIA_RPC
-# both == 0x2E9156deE65d7946305C334824e2648Ff9128f45
+# impls match; eip7702Enabled is the live disable switch
 ```
 
 Fund the global sponsor pool:

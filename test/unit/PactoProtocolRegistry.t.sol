@@ -5,6 +5,7 @@ import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {PactoProtocolRegistry} from 'contracts/PactoProtocolRegistry.sol';
 import {IPactoProtocolRegistry} from 'interfaces/IPactoProtocolRegistry.sol';
 import {ProtocolRegistryTestBase} from 'test/helpers/ProtocolRegistryTestBase.sol';
+import {MockProtocolPaymaster} from 'test/mocks/MockProtocolPaymaster.sol';
 
 contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
   address internal _owner = makeAddr('owner');
@@ -51,19 +52,23 @@ contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
     assertEq(_registry.bootstrapPolicy(), _addresses.bootstrapPolicy);
     assertEq(_registry.entryPoint(), _addresses.entryPoint);
     assertEq(_registry.allowed7702Implementation(), _addresses.allowed7702Implementation);
+    assertEq(_registry.eip7702Enabled(), _addresses.eip7702Enabled);
   }
 
   function test_Initialize_WhenCalledTwice() external {
     _registry.initialize(_sampleAddresses());
+    IPactoProtocolRegistry.ProtocolAddresses memory _addresses = _sampleAddresses();
 
     vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_AlreadyInitialized.selector);
-    _registry.initialize(_sampleAddresses());
+    _registry.initialize(_addresses);
   }
 
   function test_Initialize_WhenCalledByNonInstaller() external {
+    IPactoProtocolRegistry.ProtocolAddresses memory _addresses = _sampleAddresses();
+
     vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_NotInstaller.selector);
     vm.prank(_other);
-    _registry.initialize(_sampleAddresses());
+    _registry.initialize(_addresses);
   }
 
   function test_Initialize_WhenACoreAddressIsZero() external {
@@ -74,52 +79,137 @@ contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
     _registry.initialize(_addresses);
   }
 
-  function test_Set_WhenCalledByOwner() external {
-    _registry.initialize(_sampleAddresses());
-    address _newNft = makeAddr('newNft');
+  function test_Initialize_WhenBundleIsIncoherent() external {
+    IPactoProtocolRegistry.ProtocolAddresses memory _addresses = _sampleAddresses();
+    _addresses.usernameNft = makeAddr('otherNft');
 
-    vm.expectEmit(true, true, true, true, address(_registry));
-    emit IPactoProtocolRegistry.ProtocolAddressUpdated(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, _newNft);
-
-    vm.prank(_owner);
-    _registry.set(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, _newNft);
-
-    assertEq(_registry.usernameNft(), _newNft);
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_IncoherentBundle.selector);
+    _registry.initialize(_addresses);
   }
 
-  function test_Set_WhenCalledByNonOwner() external {
+  function test_Initialize_WhenEip7702EnabledAndImplementationIsZero() external {
+    IPactoProtocolRegistry.ProtocolAddresses memory _addresses = _sampleAddresses();
+    _addresses.allowed7702Implementation = address(0);
+
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_Invalid7702Config.selector);
+    _registry.initialize(_addresses);
+  }
+
+  function test_Initialize_WhenEip7702IsDisabledWithZeroImplementation() external {
+    IPactoProtocolRegistry.ProtocolAddresses memory _addresses = _sampleDisabledAddresses();
+
+    _registry.initialize(_addresses);
+
+    assertFalse(_registry.eip7702Enabled());
+    assertEq(_registry.allowed7702Implementation(), address(0));
+    assertEq(_registry.paymaster(), _addresses.paymaster);
+  }
+
+  function test_Migrate_WhenCalledByOwner() external {
+    _registry.initialize(_sampleAddresses());
+    IPactoProtocolRegistry.ProtocolAddresses memory _next = _sampleAddresses();
+
+    vm.expectEmit(true, true, true, true, address(_registry));
+    emit IPactoProtocolRegistry.ProtocolMigrated(_next);
+
+    vm.prank(_owner);
+    _registry.migrate(_next);
+
+    assertEq(_registry.paymaster(), _next.paymaster);
+    assertEq(_registry.usernameNft(), _next.usernameNft);
+  }
+
+  function test_Migrate_WhenCalledByNonOwner() external {
+    _registry.initialize(_sampleAddresses());
+    IPactoProtocolRegistry.ProtocolAddresses memory _next = _sampleAddresses();
+
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _other));
+    vm.prank(_other);
+    _registry.migrate(_next);
+  }
+
+  function test_Migrate_WhenNotInitialized() external {
+    IPactoProtocolRegistry.ProtocolAddresses memory _next = _sampleAddresses();
+
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_NotInitialized.selector);
+    vm.prank(_owner);
+    _registry.migrate(_next);
+  }
+
+  function test_Migrate_WhenBundleIsIncoherent() external {
+    _registry.initialize(_sampleAddresses());
+    IPactoProtocolRegistry.ProtocolAddresses memory _next = _sampleAddresses();
+    _next.pool = makeAddr('otherPool');
+
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_IncoherentBundle.selector);
+    vm.prank(_owner);
+    _registry.migrate(_next);
+  }
+
+  function test_Migrate_WhenEip7702EnabledAndImplementationIsZero() external {
+    _registry.initialize(_sampleAddresses());
+    IPactoProtocolRegistry.ProtocolAddresses memory _next = _sampleAddresses();
+    _next.allowed7702Implementation = address(0);
+
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_Invalid7702Config.selector);
+    vm.prank(_owner);
+    _registry.migrate(_next);
+  }
+
+  function test_DisableEip7702_WhenCalledByOwner() external {
+    IPactoProtocolRegistry.ProtocolAddresses memory _addresses = _sampleAddresses();
+    _registry.initialize(_addresses);
+
+    vm.expectEmit(true, true, true, true, address(_registry));
+    emit IPactoProtocolRegistry.Eip7702Disabled();
+
+    vm.prank(_owner);
+    _registry.disableEip7702();
+
+    assertFalse(_registry.eip7702Enabled());
+    assertEq(_registry.allowed7702Implementation(), _addresses.allowed7702Implementation);
+  }
+
+  function test_DisableEip7702_WhenCalledByNonOwner() external {
     _registry.initialize(_sampleAddresses());
 
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _other));
     vm.prank(_other);
-    _registry.set(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, makeAddr('newNft'));
+    _registry.disableEip7702();
   }
 
-  function test_Set_WhenAddressIsZero() external {
-    _registry.initialize(_sampleAddresses());
-
-    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_ZeroAddress.selector);
-    vm.prank(_owner);
-    _registry.set(IPactoProtocolRegistry.ProtocolComponent.UsernameNft, address(0));
-  }
-
-  function test_Set_WhenPaymasterCalledByOwner() external {
-    _registry.initialize(_sampleAddresses());
-    address _newPaymaster = makeAddr('newPaymaster');
-
-    vm.prank(_owner);
-    _registry.set(IPactoProtocolRegistry.ProtocolComponent.Paymaster, _newPaymaster);
-
-    assertEq(_registry.paymaster(), _newPaymaster);
-  }
-
-  function test_Set_WhenAllowed7702ImplementationIsZero() external {
+  function test_DisableEip7702_WhenAlreadyDisabled() external {
     _registry.initialize(_sampleAddresses());
 
     vm.prank(_owner);
-    _registry.set(IPactoProtocolRegistry.ProtocolComponent.Allowed7702Implementation, address(0));
+    _registry.disableEip7702();
 
-    assertEq(_registry.allowed7702Implementation(), address(0));
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_Eip7702AlreadyDisabled.selector);
+    vm.prank(_owner);
+    _registry.disableEip7702();
+  }
+
+  function test_DisableEip7702_WhenNotInitialized() external {
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_NotInitialized.selector);
+    vm.prank(_owner);
+    _registry.disableEip7702();
+  }
+
+  function test_Migrate_WhenReEnablingEip7702AfterDisable() external {
+    _registry.initialize(_sampleAddresses());
+
+    vm.prank(_owner);
+    _registry.disableEip7702();
+    assertFalse(_registry.eip7702Enabled());
+
+    IPactoProtocolRegistry.ProtocolAddresses memory _next = _sampleAddresses();
+
+    vm.prank(_owner);
+    _registry.migrate(_next);
+
+    assertTrue(_registry.eip7702Enabled());
+    assertEq(_registry.paymaster(), _next.paymaster);
+    assertEq(_registry.allowed7702Implementation(), _next.allowed7702Implementation);
   }
 
   function test_TransferOwnership_TwoStep() external {
@@ -142,16 +232,43 @@ contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
     assertEq(_registry.pendingOwner(), address(0));
   }
 
-  function _sampleAddresses() internal pure returns (IPactoProtocolRegistry.ProtocolAddresses memory addresses) {
-    addresses = IPactoProtocolRegistry.ProtocolAddresses({
-      usernameNft: address(0xA11),
-      paymaster: address(0xA12),
-      pool: address(0xA13),
-      bootstrapPool: address(0xA14),
-      policy: address(0xA15),
-      bootstrapPolicy: address(0xA16),
-      entryPoint: address(0xA17),
-      allowed7702Implementation: address(0xA18)
-    });
+  function _sampleAddresses() internal returns (IPactoProtocolRegistry.ProtocolAddresses memory addresses) {
+    addresses.usernameNft = makeAddr('nft');
+    addresses.pool = makeAddr('pool');
+    addresses.bootstrapPool = makeAddr('bootstrapPool');
+    addresses.policy = makeAddr('policy');
+    addresses.bootstrapPolicy = makeAddr('bootstrapPolicy');
+    addresses.entryPoint = makeAddr('entryPoint');
+    addresses.allowed7702Implementation = makeAddr('allowed7702');
+    addresses.eip7702Enabled = true;
+    MockProtocolPaymaster _paymaster = _deployMockPaymaster(
+      _registry,
+      addresses.usernameNft,
+      addresses.pool,
+      addresses.bootstrapPool,
+      addresses.policy,
+      addresses.bootstrapPolicy,
+      addresses.entryPoint,
+      addresses.allowed7702Implementation
+    );
+    addresses.paymaster = address(_paymaster);
+  }
+
+  function _sampleDisabledAddresses() internal returns (IPactoProtocolRegistry.ProtocolAddresses memory addresses) {
+    addresses = _sampleAddresses();
+    addresses.allowed7702Implementation = address(0);
+    addresses.eip7702Enabled = false;
+    addresses.paymaster = address(
+      _deployMockPaymaster(
+        _registry,
+        addresses.usernameNft,
+        addresses.pool,
+        addresses.bootstrapPool,
+        addresses.policy,
+        addresses.bootstrapPolicy,
+        addresses.entryPoint,
+        address(0)
+      )
+    );
   }
 }

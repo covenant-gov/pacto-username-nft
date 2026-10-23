@@ -279,10 +279,10 @@ EIP-7702 **activation** gas is funded separately by ops — not from bootstrap o
 ```bash
 pnpm deploy:policy:sepolia          # new SponsorPolicyRegistry
 pnpm migrate:policy:v4:sepolia      # seed targets + authorize navePirataFactory
-pnpm update:registry:sepolia        # POLICY=<new registry> pointer swap
+PAYMASTER=<new-paymaster> pnpm update:registry:sepolia
 ```
 
-No paymaster redeploy required. Re-read `policyVersion` from the new registry before shipping client updates.
+A new policy **contract** needs a new paymaster whose immutables match, then atomic `migrate`. In-place allowlist edits on the same `SponsorPolicyRegistry` address do not. Re-read `policyVersion` before shipping client updates.
 
 ---
 

@@ -51,9 +51,11 @@ contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
     _bootstrapPool = new BootstrapMintPool(_registry);
     _nft = new PactoUsernameNFT();
     _policy = new SponsorPolicyRegistry(_owner);
-    _bootstrapPolicy = new BootstrapClaimPolicy(_registry);
+    _bootstrapPolicy = new BootstrapClaimPolicy(_nft);
 
-    _paymaster = new PactoGlobalPaymasterHarness(IEntryPoint(address(_entryPoint)), _registry);
+    _paymaster = new PactoGlobalPaymasterHarness(
+      IEntryPoint(address(_entryPoint)), _registry, _nft, _policy, _bootstrapPolicy, _pool, _bootstrapPool, _allowed7702
+    );
 
     _initializeRegistry(
       _registry,
@@ -229,6 +231,37 @@ contract UnitPactoGlobalPaymaster is ProtocolRegistryTestBase {
 
     assertEq(_validationData, 0);
     assertEq(_context, hex'00');
+  }
+
+  function test_ExposedValidate_WhenEip7702IsDisabled() external {
+    bytes memory _stub = abi.encodePacked(bytes3(0xef0100), bytes20(_allowed7702));
+    vm.etch(_claimer, _stub);
+
+    vm.prank(_owner);
+    _registry.disableEip7702();
+
+    bytes memory _innerCallData = _claimCalldata(_NAME, _NPUB_HASH, _NOSTR_SIGNATURE);
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, address(_nft), _innerCallData, 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    vm.expectRevert(IPactoGlobalPaymaster.GlobalPaymaster_Eip7702Disabled.selector);
+    _paymaster.exposedValidate(_userOp, 1 ether);
+  }
+
+  function test_ExposedValidate_WhenEip7702IsDisabledAndSenderIsEoa() external {
+    _claimUsername();
+    vm.prank(_owner);
+    _policy.registerTarget(_target);
+    vm.prank(_owner);
+    _registry.disableEip7702();
+
+    PackedUserOperation memory _userOp = _buildUserOp(_claimer, _target, hex'', 0);
+    _userOp.paymasterAndData = _buildPaymasterData(_NPUB_HASH, _claimer, address(0));
+
+    (bytes memory _context, uint256 _validationData) = _paymaster.exposedValidate(_userOp, 1 ether);
+
+    assertEq(_validationData, 0);
+    assertEq(_context, hex'01');
   }
 
   function test_ExposedValidate_WhenEip7702DelegationImplIsWrong() external {

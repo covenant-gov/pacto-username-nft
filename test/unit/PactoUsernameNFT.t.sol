@@ -109,6 +109,12 @@ contract UnitPactoUsernameNFT is Test {
     assertEq(_record.tokenId, 1);
     assertEq(_nft.ownerOf(1), _claimer);
     assertEq(_nft.npubOf(_claimer), _NPUB_HASH);
+    (bytes32 _memberNpub, uint64 _memberTokenId) = _nft.membership(_claimer);
+    assertEq(_memberNpub, _NPUB_HASH);
+    assertEq(_memberTokenId, 1);
+    (bytes32 _otherNpub, uint64 _otherTokenId) = _nft.membership(_other);
+    assertEq(_otherNpub, bytes32(0));
+    assertEq(_otherTokenId, 0);
     assertEq(_nft.usedNonce(_NPUB_HASH), 1);
     assertTrue(_nft.nameAvailable('unused'));
     assertTrue(_nft.nameAvailable('DaoPunk'));
@@ -238,6 +244,12 @@ contract UnitPactoUsernameNFT is Test {
     assertEq(_nft.ownerOf(1), _pending);
     assertEq(_nft.npubOf(_pending), _NPUB_HASH);
     assertEq(_nft.npubOf(_claimer), bytes32(0));
+    (bytes32 _pendingNpub, uint64 _pendingTokenId) = _nft.membership(_pending);
+    assertEq(_pendingNpub, _NPUB_HASH);
+    assertEq(_pendingTokenId, 1);
+    (bytes32 _previousNpub, uint64 _previousTokenId) = _nft.membership(_claimer);
+    assertEq(_previousNpub, bytes32(0));
+    assertEq(_previousTokenId, 0);
   }
 
   function test_ClaimAddressTransfer_WhenCalledByANonPendingAddress() external givenClaimedUsername {
