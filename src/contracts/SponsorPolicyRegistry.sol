@@ -58,6 +58,7 @@ contract SponsorPolicyRegistry is ISponsorPolicyRegistry, Ownable2Step {
     address,
     uint256
   ) external view returns (bool sponsorable) {
+    // Hats-indexed modules are the expected member hot path; contract/selector are fallbacks.
     uint256 _topHatId = moduleToTopHat[target];
     if (_topHatId != 0 && _topHatSponsored[_topHatId]) return true;
 

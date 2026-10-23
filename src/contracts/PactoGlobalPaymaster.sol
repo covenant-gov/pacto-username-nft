@@ -112,36 +112,42 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     uint256 maxCost
   ) internal view override returns (bytes memory context, uint256 validationData) {
     PaymasterData memory _data = _parsePaymasterData(userOp.paymasterAndData);
-
     _requireMemberBindingValid(userOp.getSender(), _data.member);
+    return _dispatchValidation(_data, userOp.callData, maxCost);
+  }
 
-    (address _target, uint256 _value, bytes calldata _innerCallData, bool _validCall) =
-      UserOpCalldataLib.decodeExecute(userOp.callData);
-    if (!_validCall) revert GlobalPaymaster_InvalidCallData();
-
-    (bytes32 _npubHash, uint64 _tokenId) = USERNAME_NFT.membership(_data.member);
+  /// @notice Routes bootstrap vs member sponsorship from membership
+  /// @param data The parsed paymaster payload
+  /// @param accountCallData The UserOp account calldata
+  /// @param maxCost The EntryPoint maximum cost
+  /// @return context The postOp context tag
+  /// @return validationData Zero when the user operation is valid
+  function _dispatchValidation(
+    PaymasterData memory data,
+    bytes calldata accountCallData,
+    uint256 maxCost
+  ) internal view returns (bytes memory context, uint256 validationData) {
+    (bytes32 _npubHash, uint64 _tokenId) = USERNAME_NFT.membership(data.member);
     if (_npubHash == bytes32(0)) {
-      return _validateBootstrapPath(_data, _target, _value, _innerCallData, maxCost);
+      return _validateBootstrapPath(data, accountCallData, maxCost);
     }
 
-    return _validateMemberPath(_data, _npubHash, _tokenId, _target, _innerCallData, maxCost);
+    return _validateMemberPath(data, _npubHash, _tokenId, accountCallData, maxCost);
   }
 
   /// @notice Validates bootstrap mint sponsorship for pre-claim members
   /// @param data The parsed paymaster payload
-  /// @param target The inner call target
-  /// @param value The inner call value
-  /// @param innerCallData The inner call payload
+  /// @param accountCallData The UserOp account calldata
   /// @param maxCost The EntryPoint maximum cost
   /// @return context The bootstrap postOp context tag
   /// @return validationData Zero when the user operation is valid
   function _validateBootstrapPath(
     PaymasterData memory data,
-    address target,
-    uint256 value,
-    bytes calldata innerCallData,
+    bytes calldata accountCallData,
     uint256 maxCost
   ) internal view returns (bytes memory context, uint256 validationData) {
+    (address _target, uint256 _value, bytes calldata _innerCallData) = _requireExecutedCall(accountCallData);
+
     {
       uint256 _requiredBalance = PaymasterHeadroomLib.requiredWei(maxCost);
       uint256 _spendable = BOOTSTRAP_POOL.spendablePoolWei();
@@ -150,14 +156,14 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
       }
     }
 
-    if (value != 0) revert GlobalPaymaster_NonZeroValue();
+    if (_value != 0) revert GlobalPaymaster_NonZeroValue();
 
     {
-      (bytes32 _claimNpubHash, bool _validClaim) = _decodeClaimNpubHash(innerCallData);
+      (bytes32 _claimNpubHash, bool _validClaim) = _decodeClaimNpubHash(_innerCallData);
       if (!_validClaim || _claimNpubHash != data.npubHash) revert GlobalPaymaster_InvalidClaimPayload();
     }
 
-    if (!BOOTSTRAP_POLICY.isSponsorable(target, innerCallData, data.member, 0)) {
+    if (!BOOTSTRAP_POLICY.isSponsorable(_target, _innerCallData, data.member, 0)) {
       revert GlobalPaymaster_BootstrapNotSponsorable();
     }
 
@@ -169,8 +175,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
   /// @param data The parsed paymaster payload
   /// @param npubHash The membership npub hash
   /// @param tokenId The membership token id
-  /// @param target The inner call target
-  /// @param innerCallData The inner call payload
+  /// @param accountCallData The UserOp account calldata
   /// @param maxCost The EntryPoint maximum cost
   /// @return context The member postOp context tag
   /// @return validationData Zero when the user operation is valid
@@ -178,10 +183,11 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     PaymasterData memory data,
     bytes32 npubHash,
     uint64 tokenId,
-    address target,
-    bytes calldata innerCallData,
+    bytes calldata accountCallData,
     uint256 maxCost
   ) internal view returns (bytes memory context, uint256 validationData) {
+    (address _target,, bytes calldata _innerCallData) = _requireExecutedCall(accountCallData);
+
     if (data.policy != address(0)) revert GlobalPaymaster_CustomPolicyNotAllowed();
 
     {
@@ -194,16 +200,32 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
 
     if (npubHash != data.npubHash) revert GlobalPaymaster_IneligibleMember();
 
-    if (target == address(USERNAME_NFT) && innerCallData.length >= 4 && bytes4(innerCallData[:4]) == _CLAIM_SELECTOR) {
+    if (_target == address(USERNAME_NFT) && _innerCallData.length >= 4 && bytes4(_innerCallData[:4]) == _CLAIM_SELECTOR)
+    {
       revert GlobalPaymaster_MemberNotSponsorable();
     }
 
-    if (!POLICY.isSponsorable(target, innerCallData, data.member, tokenId)) {
+    if (!POLICY.isSponsorable(_target, _innerCallData, data.member, tokenId)) {
       revert GlobalPaymaster_MemberNotSponsorable();
     }
 
     context = abi.encodePacked(_MEMBER_CONTEXT);
     validationData = 0;
+  }
+
+  /// @notice Decodes a supported execute call or reverts
+  /// @param accountCallData The UserOp account calldata
+  /// @return target The inner call target
+  /// @return value The inner call value
+  /// @return innerCallData The inner call payload
+  function _requireExecutedCall(bytes calldata accountCallData)
+    internal
+    pure
+    returns (address target, uint256 value, bytes calldata innerCallData)
+  {
+    bool _validCall;
+    (target, value, innerCallData, _validCall) = UserOpCalldataLib.decodeExecute(accountCallData);
+    if (!_validCall) revert GlobalPaymaster_InvalidCallData();
   }
 
   /// @notice Validates member binding for EOAs and EIP-7702 delegated senders

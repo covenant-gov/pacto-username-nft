@@ -53,12 +53,12 @@ flowchart TB
 
   NFT --> Record
   Factory --> Registry
-  Paymaster -->|"member: eligibleMember + policy"| Registry
-  Paymaster -->|"bootstrap: canBootstrapClaim"| Registry
-  BootstrapPolicy --> Registry
-  Pool --> Registry
-  BootstrapPool --> Registry
+  Paymaster -->|"eip7702Enabled kill switch"| Registry
+  Pool -->|"paymaster()"| Registry
+  BootstrapPool -->|"paymaster()"| Registry
+  Paymaster --> NFT
   Paymaster --> Policy
+  Paymaster --> BootstrapPolicy
   Paymaster --> Pool
   Paymaster --> BootstrapPool
 ```
@@ -79,7 +79,7 @@ Order: **EOA ETH** → **squad sponsor** → **global member** (post-mint). **Bo
 
 | Contract | Role |
 |----------|------|
-| `PactoProtocolRegistry` | Mutable alpha address book; owner updates NFT/paymaster/pools/policies |
+| `PactoProtocolRegistry` | Generation pointer; owner `migrate`s a coherent bundle and can `disableEip7702` |
 | `PactoUsernameNFT` | ERC-721 username + npub-keyed `UsernameRecord`; dual-sig claim; 2-step EVM rotation |
 | `GlobalSponsorPool` | Protocol-wide ETH vault for member actions; pro-rata shares; `spendGas` only from registry paymaster |
 | `BootstrapMintPool` | Separate ETH vault for one-time bootstrap `claim()` gas |
@@ -178,9 +178,9 @@ Show checkmark only when **all** hold:
 
 ### Paymaster dual-path validation
 
-Routing key: `PactoUsernameNFT.npubOf(member)`.
+Routing key: `PactoUsernameNFT.membership(member)` (`npubHash == 0` → bootstrap).
 
-**Bootstrap path** (`npubOf == 0`):
+**Bootstrap path** (`npubHash == 0`):
 
 1. Bootstrap pool headroom (115% of `maxCost`).
 2. Member binding (EOA or EIP-7702).
@@ -189,7 +189,7 @@ Routing key: `PactoUsernameNFT.npubOf(member)`.
 5. `BootstrapClaimPolicy.isSponsorable(...)`.
 6. PostOp bills `BootstrapMintPool`.
 
-**Member path** (`npubOf != 0`):
+**Member path** (`npubHash != 0`):
 
 1. Global pool headroom (115% of `maxCost`).
 2. Member binding.
@@ -198,14 +198,14 @@ Routing key: `PactoUsernameNFT.npubOf(member)`.
 5. `SponsorPolicyRegistry.isSponsorable(...)`.
 6. PostOp bills `GlobalSponsorPool`.
 
-Additional checks: EIP-7702 member binding (same as [pacto-squad-sponsor](https://github.com/covenant-gov/pacto-squad-sponsor)).
+Additional checks: EIP-7702 member binding requires `registry.eip7702Enabled()` and `ALLOWED_7702_IMPLEMENTATION`. Owner `disableEip7702()` rejects delegated senders immediately; EOAs still validate. Re-enable only by `migrate` to a new paymaster generation.
 
 ### Policy registry (member path only)
 
-- **Default deny.** Three sponsorship tiers:
-  1. **Target** — contract-wide allow (`registerTarget`). Used for username NFT + protocol factories.
-  2. **Selector** — narrow allow (`registerSelector`). Optional; legacy migration support.
-  3. **TopHat** — all indexed gov modules for one squad tree (`registerTopHat` + `moduleToTopHat`).
+- **Default deny.** Runtime lookup order (Hats-indexed modules are the expected member hot path):
+  1. **TopHat** — indexed gov module whose tree is sponsored (`moduleToTopHat` + `registerTopHat`).
+  2. **Target** — contract-wide allow (`registerTarget`). Used for username NFT + protocol factories.
+  3. **Selector** — narrow allow (`registerSelector`). Optional; legacy migration support.
 - `authorizedRegistrars` — only pacto-gov factories may call `registerTopHat` / `registerModulesForTopHat`.
 - `policyVersion` increments on target/selector/topHat/module changes; clients sync via address book.
 - Deploy seeds **four targets** when deployer == protocol owner:
@@ -249,7 +249,7 @@ PostOp context: `0x00` → bootstrap pool, `0x01` → global pool.
 | D9 | On-chain Nostr verify uses compact struct hash, not NIP-01 JSON |
 | D10 | Member path rejects custom `policy` addresses (closes pool-drain vector) |
 | D11 | EIP-7702 activation gas is ops/client concern, out of bootstrap pool scope |
-| D12 | Alpha: live contracts resolve addresses from `PactoProtocolRegistry` (mutable); lock down post-alpha |
+| D12 | Registry is the generation pointer. Paymaster pins NFT/policies/pools/7702 impl as immutables. Owner upgrades via atomic `migrate` of a new paymaster bundle. `disableEip7702` is the emergency 7702 kill switch. In-place policy allowlist edits on the same policy address do not need migrate. |
 
 ---
 
@@ -264,6 +264,7 @@ See [README](../README.md). Artifacts: `deployments/<chainId>/full-system.json` 
   "chainId": 11155111,
   "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
   "allowed7702Implementation": "0x…",
+  "eip7702Enabled": true,
   "protocolRegistry": "0x…",
   "usernameSystemFactory": "0x…",
   "pactoUsernameNft": "0x…",
@@ -283,30 +284,20 @@ Post-deploy ops (Sepolia example):
 pnpm fund:paymaster:sepolia   # EP deposit + FCFS stake
 ```
 
-Alpha NFT upgrade (no claim migration):
+Generation migrate (new paymaster constructed with the next NFT/policies/pools/7702 impl):
 
 ```bash
-pnpm deploy:nft:sepolia        # writes deployments/<chainId>/username-nft.json
-pnpm update:registry:sepolia   # points registry at new NFT; registers target on new NFT when owner==deployer
+PAYMASTER=<new-paymaster> pnpm update:registry:sepolia
+# Optional: EIP7702_ENABLED=true|false (defaults to non-zero paymaster impl)
 ```
 
-EIP-7702 allowlist (UN-1 / [pacto-aa#1](https://github.com/covenant-gov/pacto-aa/issues/1)):
+Emergency EIP-7702 disable (current generation; EOAs still sponsored):
 
 ```bash
-# Place pacto-aa deployments/11155111/eip7702-account.json under deployments/<chainId>/
-# (vendored in-repo for Sepolia: 0x2E9156deE65d7946305C334824e2648Ff9128f45)
-pnpm update:registry:sepolia   # sets Allowed7702 from artifact (or ALLOWED_7702 env)
-# Do NOT pnpm deploy:sepolia — live protocolRegistry must stay for squad SS-3
+cast send $PROTOCOL_REGISTRY 'disableEip7702()' --rpc-url $SEPOLIA_RPC
 ```
 
-Optional SponsorPolicyRegistry swap (Ownable2Step; no full-system redeploy):
-
-```bash
-pnpm deploy:policy:sepolia        # writes deployments/<chainId>/sponsor-policy-registry.json
-pnpm migrate:policy:v4:sepolia    # seed v4 targets + authorize navePirataFactory
-pnpm update:registry:sepolia      # points registry.policy at new SPR
-pnpm verify:upgrades:sepolia      # Etherscan: new NFT + SPR only (not full VerifyDeploy)
-```
+Re-enable 7702 only by migrating to a new paymaster generation. In-place `SponsorPolicyRegistry` allowlist edits on the same address do not need `migrate`.
 
 Fund pools separately:
 
