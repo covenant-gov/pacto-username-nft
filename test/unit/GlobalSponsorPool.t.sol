@@ -86,6 +86,8 @@ contract UnitGlobalSponsorPool is ProtocolRegistryTestBase {
     vm.prank(_owner);
     _registry.migrate(_next);
 
+    assertEq(_registry.paymaster(), address(_nextPaymaster));
+
     vm.expectRevert(ISponsorCommon.Sponsor_NotPaymaster.selector);
     vm.prank(_paymaster);
     _pool.spendGas(0.1 ether);

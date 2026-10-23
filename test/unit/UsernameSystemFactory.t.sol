@@ -61,4 +61,16 @@ contract UnitUsernameSystemFactory is Test {
     assertEq(_paymaster.ALLOWED_7702_IMPLEMENTATION(), _allowed7702);
     assertEq(address(BootstrapClaimPolicy(_factory.BOOTSTRAP_POLICY()).USERNAME_NFT()), _factory.USERNAME_NFT());
   }
+
+  function test_Constructor_WhenAllowed7702IsZeroDisablesEip7702() external {
+    UsernameSystemFactory _disabledFactory =
+      new UsernameSystemFactory(IEntryPoint(address(_entryPoint)), _owner, address(0));
+    PactoProtocolRegistry _registry = PactoProtocolRegistry(address(_disabledFactory.REGISTRY()));
+    PactoGlobalPaymaster _paymaster = PactoGlobalPaymaster(payable(_disabledFactory.PAYMASTER()));
+
+    assertFalse(_registry.eip7702Enabled());
+    assertEq(_registry.allowed7702Implementation(), address(0));
+    assertEq(_paymaster.ALLOWED_7702_IMPLEMENTATION(), address(0));
+    assertEq(address(_paymaster.REGISTRY()), address(_registry));
+  }
 }

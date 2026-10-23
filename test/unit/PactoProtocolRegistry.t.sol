@@ -87,6 +87,24 @@ contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
     _registry.initialize(_addresses);
   }
 
+  function test_Initialize_WhenEip7702EnabledAndImplementationIsZero() external {
+    IPactoProtocolRegistry.ProtocolAddresses memory _addresses = _sampleAddresses();
+    _addresses.allowed7702Implementation = address(0);
+
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_Invalid7702Config.selector);
+    _registry.initialize(_addresses);
+  }
+
+  function test_Initialize_WhenEip7702IsDisabledWithZeroImplementation() external {
+    IPactoProtocolRegistry.ProtocolAddresses memory _addresses = _sampleDisabledAddresses();
+
+    _registry.initialize(_addresses);
+
+    assertFalse(_registry.eip7702Enabled());
+    assertEq(_registry.allowed7702Implementation(), address(0));
+    assertEq(_registry.paymaster(), _addresses.paymaster);
+  }
+
   function test_Migrate_WhenCalledByOwner() external {
     _registry.initialize(_sampleAddresses());
     IPactoProtocolRegistry.ProtocolAddresses memory _next = _sampleAddresses();
@@ -126,6 +144,72 @@ contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
     vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_IncoherentBundle.selector);
     vm.prank(_owner);
     _registry.migrate(_next);
+  }
+
+  function test_Migrate_WhenEip7702EnabledAndImplementationIsZero() external {
+    _registry.initialize(_sampleAddresses());
+    IPactoProtocolRegistry.ProtocolAddresses memory _next = _sampleAddresses();
+    _next.allowed7702Implementation = address(0);
+
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_Invalid7702Config.selector);
+    vm.prank(_owner);
+    _registry.migrate(_next);
+  }
+
+  function test_DisableEip7702_WhenCalledByOwner() external {
+    IPactoProtocolRegistry.ProtocolAddresses memory _addresses = _sampleAddresses();
+    _registry.initialize(_addresses);
+
+    vm.expectEmit(true, true, true, true, address(_registry));
+    emit IPactoProtocolRegistry.Eip7702Disabled();
+
+    vm.prank(_owner);
+    _registry.disableEip7702();
+
+    assertFalse(_registry.eip7702Enabled());
+    assertEq(_registry.allowed7702Implementation(), _addresses.allowed7702Implementation);
+  }
+
+  function test_DisableEip7702_WhenCalledByNonOwner() external {
+    _registry.initialize(_sampleAddresses());
+
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _other));
+    vm.prank(_other);
+    _registry.disableEip7702();
+  }
+
+  function test_DisableEip7702_WhenAlreadyDisabled() external {
+    _registry.initialize(_sampleAddresses());
+
+    vm.prank(_owner);
+    _registry.disableEip7702();
+
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_Eip7702AlreadyDisabled.selector);
+    vm.prank(_owner);
+    _registry.disableEip7702();
+  }
+
+  function test_DisableEip7702_WhenNotInitialized() external {
+    vm.expectRevert(IPactoProtocolRegistry.ProtocolRegistry_NotInitialized.selector);
+    vm.prank(_owner);
+    _registry.disableEip7702();
+  }
+
+  function test_Migrate_WhenReEnablingEip7702AfterDisable() external {
+    _registry.initialize(_sampleAddresses());
+
+    vm.prank(_owner);
+    _registry.disableEip7702();
+    assertFalse(_registry.eip7702Enabled());
+
+    IPactoProtocolRegistry.ProtocolAddresses memory _next = _sampleAddresses();
+
+    vm.prank(_owner);
+    _registry.migrate(_next);
+
+    assertTrue(_registry.eip7702Enabled());
+    assertEq(_registry.paymaster(), _next.paymaster);
+    assertEq(_registry.allowed7702Implementation(), _next.allowed7702Implementation);
   }
 
   function test_TransferOwnership_TwoStep() external {
@@ -168,5 +252,23 @@ contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
       addresses.allowed7702Implementation
     );
     addresses.paymaster = address(_paymaster);
+  }
+
+  function _sampleDisabledAddresses() internal returns (IPactoProtocolRegistry.ProtocolAddresses memory addresses) {
+    addresses = _sampleAddresses();
+    addresses.allowed7702Implementation = address(0);
+    addresses.eip7702Enabled = false;
+    addresses.paymaster = address(
+      _deployMockPaymaster(
+        _registry,
+        addresses.usernameNft,
+        addresses.pool,
+        addresses.bootstrapPool,
+        addresses.policy,
+        addresses.bootstrapPolicy,
+        addresses.entryPoint,
+        address(0)
+      )
+    );
   }
 }
