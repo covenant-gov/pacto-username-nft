@@ -46,6 +46,9 @@ contract PactoProtocolRegistry is IPactoProtocolRegistry, Ownable2Step {
   /// @inheritdoc IPactoProtocolRegistry
   address public allowed7702Implementation;
 
+  /// @inheritdoc IPactoProtocolRegistry
+  bool public eip7702Enabled;
+
   /// @notice Sets the protocol owner and one-time installer
   /// @param owner The protocol owner for later address updates
   /// @param installer_ The factory allowed to call initialize once
@@ -59,6 +62,7 @@ contract PactoProtocolRegistry is IPactoProtocolRegistry, Ownable2Step {
     if (msg.sender != INSTALLER) revert ProtocolRegistry_NotInstaller();
     if (initialized) revert ProtocolRegistry_AlreadyInitialized();
     _requireCoreAddresses(addresses);
+    _requireEip7702Config(addresses);
     _requireBundleCoherent(addresses);
 
     initialized = true;
@@ -70,10 +74,20 @@ contract PactoProtocolRegistry is IPactoProtocolRegistry, Ownable2Step {
   function migrate(ProtocolAddresses calldata addresses) external onlyOwner {
     if (!initialized) revert ProtocolRegistry_NotInitialized();
     _requireCoreAddresses(addresses);
+    _requireEip7702Config(addresses);
     _requireBundleCoherent(addresses);
 
     _writeAddresses(addresses);
     emit ProtocolMigrated(addresses);
+  }
+
+  /// @inheritdoc IPactoProtocolRegistry
+  function disableEip7702() external onlyOwner {
+    if (!initialized) revert ProtocolRegistry_NotInitialized();
+    if (!eip7702Enabled) revert ProtocolRegistry_Eip7702AlreadyDisabled();
+
+    eip7702Enabled = false;
+    emit Eip7702Disabled();
   }
 
   /// @notice Reverts when a required protocol address is zero
@@ -84,6 +98,14 @@ contract PactoProtocolRegistry is IPactoProtocolRegistry, Ownable2Step {
         || addresses.bootstrapPool == address(0) || addresses.policy == address(0)
         || addresses.bootstrapPolicy == address(0) || addresses.entryPoint == address(0)
     ) revert ProtocolRegistry_ZeroAddress();
+  }
+
+  /// @notice Reverts when EIP-7702 is enabled without an implementation
+  /// @param addresses The candidate protocol addresses
+  function _requireEip7702Config(ProtocolAddresses calldata addresses) internal pure {
+    if (addresses.eip7702Enabled && addresses.allowed7702Implementation == address(0)) {
+      revert ProtocolRegistry_Invalid7702Config();
+    }
   }
 
   /// @notice Reverts when the paymaster immutables do not match the address book
@@ -112,5 +134,6 @@ contract PactoProtocolRegistry is IPactoProtocolRegistry, Ownable2Step {
     bootstrapPolicy = addresses.bootstrapPolicy;
     entryPoint = addresses.entryPoint;
     allowed7702Implementation = addresses.allowed7702Implementation;
+    eip7702Enabled = addresses.eip7702Enabled;
   }
 }

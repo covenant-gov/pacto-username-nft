@@ -52,6 +52,7 @@ contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
     assertEq(_registry.bootstrapPolicy(), _addresses.bootstrapPolicy);
     assertEq(_registry.entryPoint(), _addresses.entryPoint);
     assertEq(_registry.allowed7702Implementation(), _addresses.allowed7702Implementation);
+    assertEq(_registry.eip7702Enabled(), _addresses.eip7702Enabled);
   }
 
   function test_Initialize_WhenCalledTwice() external {
@@ -155,6 +156,7 @@ contract UnitPactoProtocolRegistry is ProtocolRegistryTestBase {
     addresses.bootstrapPolicy = makeAddr('bootstrapPolicy');
     addresses.entryPoint = makeAddr('entryPoint');
     addresses.allowed7702Implementation = makeAddr('allowed7702');
+    addresses.eip7702Enabled = true;
     MockProtocolPaymaster _paymaster = _deployMockPaymaster(
       _registry,
       addresses.usernameNft,

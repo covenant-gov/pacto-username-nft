@@ -36,7 +36,7 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
   /// @notice Initializes and wires the username sponsorship system
   /// @param entryPoint The ERC-4337 EntryPoint v0.7
   /// @param owner The protocol owner for admin functions
-  /// @param allowed7702Implementation The allowlisted EIP-7702 account implementation
+  /// @param allowed7702Implementation The allowlisted EIP-7702 account implementation; zero disables 7702
   constructor(IEntryPoint entryPoint, address owner, address allowed7702Implementation) {
     if (entryPoint == IEntryPoint(address(0)) || owner == address(0)) revert Factory_ZeroAddress();
 
@@ -70,7 +70,8 @@ contract UsernameSystemFactory is IUsernameSystemFactory {
         policy: _policy,
         bootstrapPolicy: _bootstrapPolicy,
         entryPoint: address(entryPoint),
-        allowed7702Implementation: allowed7702Implementation
+        allowed7702Implementation: allowed7702Implementation,
+        eip7702Enabled: allowed7702Implementation != address(0)
       })
     );
   }

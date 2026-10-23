@@ -45,6 +45,7 @@ contract UnitUsernameSystemFactory is Test {
     assertEq(_registry.bootstrapPolicy(), _factory.BOOTSTRAP_POLICY());
     assertEq(_registry.entryPoint(), address(_entryPoint));
     assertEq(_registry.allowed7702Implementation(), _allowed7702);
+    assertTrue(_registry.eip7702Enabled());
 
     assertEq(GlobalSponsorPool(payable(_factory.POOL())).paymaster(), _factory.PAYMASTER());
     assertEq(BootstrapMintPool(payable(_factory.BOOTSTRAP_POOL())).paymaster(), _factory.PAYMASTER());

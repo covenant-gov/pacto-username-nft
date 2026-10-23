@@ -34,7 +34,8 @@ abstract contract ProtocolRegistryTestBase is Test {
         policy: policy,
         bootstrapPolicy: bootstrapPolicy,
         entryPoint: entryPoint,
-        allowed7702Implementation: allowed7702
+        allowed7702Implementation: allowed7702,
+        eip7702Enabled: allowed7702 != address(0)
       })
     );
   }

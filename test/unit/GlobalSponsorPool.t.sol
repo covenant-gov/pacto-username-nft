@@ -79,7 +79,8 @@ contract UnitGlobalSponsorPool is ProtocolRegistryTestBase {
       policy: _policy,
       bootstrapPolicy: _bootstrapPolicy,
       entryPoint: _entryPoint,
-      allowed7702Implementation: _allowed7702
+      allowed7702Implementation: _allowed7702,
+      eip7702Enabled: true
     });
 
     vm.prank(_owner);

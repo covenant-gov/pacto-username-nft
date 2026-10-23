@@ -42,6 +42,7 @@ contract DeployUsernameSystem is DeploymentArtifacts {
     FullSystemArtifact memory _artifact;
     _artifact.entryPoint = _config.entryPoint;
     _artifact.allowed7702Implementation = _allowed7702;
+    _artifact.eip7702Enabled = _allowed7702 != address(0);
     _artifact.protocolRegistry = address(_factory.REGISTRY());
     _artifact.usernameSystemFactory = address(_factory);
     _artifact.pactoUsernameNft = _factory.USERNAME_NFT();

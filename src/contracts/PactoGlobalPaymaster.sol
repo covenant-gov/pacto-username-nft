@@ -62,7 +62,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
   /// @param bootstrapPolicy The bootstrap-claim sponsor policy
   /// @param pool The member-path sponsor pool
   /// @param bootstrapPool The bootstrap-claim sponsor pool
-  /// @param allowed7702 The allowlisted EIP-7702 account implementation
+  /// @param allowed7702 The allowlisted EIP-7702 account implementation; zero when deployed disabled
   constructor(
     IEntryPoint entryPoint,
     IPactoProtocolRegistry registry,
@@ -76,7 +76,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     if (
       address(entryPoint) == address(0) || address(registry) == address(0) || address(usernameNft) == address(0)
         || address(policy) == address(0) || address(bootstrapPolicy) == address(0) || address(pool) == address(0)
-        || address(bootstrapPool) == address(0) || allowed7702 == address(0)
+        || address(bootstrapPool) == address(0)
     ) revert GlobalPaymaster_ZeroAddress();
 
     REGISTRY = registry;
@@ -219,6 +219,7 @@ contract PactoGlobalPaymaster is IPactoGlobalPaymaster, BasePaymaster {
     }
 
     if (Eip7702Lib.isDelegation(_code)) {
+      if (!REGISTRY.eip7702Enabled()) revert GlobalPaymaster_Eip7702Disabled();
       if (sender != member) revert GlobalPaymaster_InvalidMemberBinding(sender, member);
       address _impl = Eip7702Lib.implementation(_code);
       if (_impl != ALLOWED_7702_IMPLEMENTATION) revert GlobalPaymaster_Invalid7702Implementation(_impl);

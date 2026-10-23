@@ -59,6 +59,9 @@ interface IPactoGlobalPaymaster {
   /// @notice Thrown when EIP-7702 implementation is not allowlisted
   error GlobalPaymaster_Invalid7702Implementation(address implementation);
 
+  /// @notice Thrown when EIP-7702 sponsorship is disabled
+  error GlobalPaymaster_Eip7702Disabled();
+
   /// @notice Thrown when UserOp calldata is not a supported execute call
   error GlobalPaymaster_InvalidCallData();
 

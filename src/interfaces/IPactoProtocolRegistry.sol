@@ -12,6 +12,7 @@ interface IPactoProtocolRegistry {
   /// @param bootstrapPolicy Bootstrap-claim sponsor policy
   /// @param entryPoint ERC-4337 EntryPoint v0.7
   /// @param allowed7702Implementation Allowlisted EIP-7702 account implementation
+  /// @param eip7702Enabled Whether EIP-7702 delegated senders are accepted
   struct ProtocolAddresses {
     address usernameNft;
     address paymaster;
@@ -21,6 +22,7 @@ interface IPactoProtocolRegistry {
     address bootstrapPolicy;
     address entryPoint;
     address allowed7702Implementation;
+    bool eip7702Enabled;
   }
 
   /// @notice Emitted when the installer writes the initial address book
@@ -28,6 +30,9 @@ interface IPactoProtocolRegistry {
 
   /// @notice Emitted when the owner migrates every address-book slot atomically
   event ProtocolMigrated(ProtocolAddresses addresses);
+
+  /// @notice Emitted when the owner disables EIP-7702 sponsorship
+  event Eip7702Disabled();
 
   /// @notice Thrown when a required address is zero
   error ProtocolRegistry_ZeroAddress();
@@ -43,6 +48,12 @@ interface IPactoProtocolRegistry {
 
   /// @notice Thrown when paymaster immutables do not match the address book
   error ProtocolRegistry_IncoherentBundle();
+
+  /// @notice Thrown when EIP-7702 is enabled with a zero implementation
+  error ProtocolRegistry_Invalid7702Config();
+
+  /// @notice Thrown when disableEip7702 is called while already disabled
+  error ProtocolRegistry_Eip7702AlreadyDisabled();
 
   /// @notice Returns the one-time installer allowed to call initialize
   function INSTALLER() external view returns (address installerAddress);
@@ -74,6 +85,9 @@ interface IPactoProtocolRegistry {
   /// @notice Returns the recorded EIP-7702 allowlist address
   function allowed7702Implementation() external view returns (address allowed7702);
 
+  /// @notice Returns whether EIP-7702 delegated senders are accepted
+  function eip7702Enabled() external view returns (bool enabled);
+
   /// @notice Writes the initial protocol address book
   /// @param addresses The initial protocol addresses
   function initialize(ProtocolAddresses calldata addresses) external;
@@ -81,4 +95,7 @@ interface IPactoProtocolRegistry {
   /// @notice Atomically replaces every protocol address-book slot
   /// @param addresses The next coherent generation
   function migrate(ProtocolAddresses calldata addresses) external;
+
+  /// @notice Disables EIP-7702 sponsorship for the current generation
+  function disableEip7702() external;
 }

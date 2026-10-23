@@ -79,6 +79,15 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     addresses.bootstrapPolicy = address(paymaster.BOOTSTRAP_POLICY());
     addresses.entryPoint = address(PactoGlobalPaymaster(payable(address(paymaster))).entryPoint());
     addresses.allowed7702Implementation = paymaster.ALLOWED_7702_IMPLEMENTATION();
+    addresses.eip7702Enabled = _resolveEip7702Enabled(addresses.allowed7702Implementation);
+  }
+
+  /// @notice Resolves whether the next generation accepts EIP-7702 senders
+  /// @param allowed7702 The paymaster's pinned EIP-7702 implementation
+  /// @return enabled True when EIP-7702 sponsorship should be enabled
+  function _resolveEip7702Enabled(address allowed7702) internal view returns (bool enabled) {
+    if (vm.envExists('EIP7702_ENABLED')) return vm.envBool('EIP7702_ENABLED');
+    enabled = allowed7702 != address(0);
   }
 
   /// @notice Logs the live registry slots
@@ -92,6 +101,7 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
     console.log('bootstrapPolicy:', registry.bootstrapPolicy());
     console.log('entryPoint:', registry.entryPoint());
     console.log('allowed7702Implementation:', registry.allowed7702Implementation());
+    console.log('eip7702Enabled:', registry.eip7702Enabled());
     console.log('policyVersion:', SponsorPolicyRegistry(registry.policy()).policyVersion());
   }
 
@@ -103,6 +113,7 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
   ) internal view returns (FullSystemArtifact memory artifact) {
     artifact.entryPoint = registry.entryPoint();
     artifact.allowed7702Implementation = registry.allowed7702Implementation();
+    artifact.eip7702Enabled = registry.eip7702Enabled();
     artifact.protocolRegistry = address(registry);
     artifact.usernameSystemFactory = json.readAddress('.usernameSystemFactory');
     artifact.pactoUsernameNft = registry.usernameNft();

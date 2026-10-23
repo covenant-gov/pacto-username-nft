@@ -123,6 +123,7 @@ contract VerifyDeploy is Script {
     require(registry.bootstrapPolicy() == d.bootstrapPolicy, 'verify: registry bootstrap policy mismatch');
     require(registry.entryPoint() == d.entryPoint, 'verify: registry entryPoint mismatch');
     require(registry.allowed7702Implementation() == d.allowed7702, 'verify: registry 7702 mismatch');
+    require(!registry.eip7702Enabled() || d.allowed7702 != address(0), 'verify: enabled 7702 missing impl');
     require(d.nostrClaimLink != address(0), 'verify: missing NostrClaimLink');
     require(d.nostrClaimLink.code.length > 0, 'verify: NostrClaimLink has no code');
   }
