@@ -37,7 +37,7 @@ Configure `.env` and import deployer keys into Foundry keystore (`cast wallet im
 ```bash
 source .env
 
-# Dry-run (writes deployments/*.json with simulated addresses; does not send txs)
+# Dry-run (writes simulations/<chainId>/*.json with simulated addresses; does not send txs)
 pnpm simulate-deploy:sepolia
 
 # Broadcast + write deployments/<chainId>/full-system.json, then verify via VerifyDeploy
