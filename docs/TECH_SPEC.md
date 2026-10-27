@@ -243,7 +243,7 @@ PostOp context: `0x00` → bootstrap pool, `0x01` → global pool.
 | D3 | Global pool is protocol-funded; bootstrap pool is separate ops-funded float |
 | D4 | Permissions ≠ gas (unchanged from squad sponsor) |
 | D5 | EntryPoint v0.7 + Pimlico bundler + PactoSimple7702Account (shared with squad sponsor) |
-| D6 | Deployment JSON written **only** on `--broadcast` / resume, not dry-run simulations |
+| D6 | Dry-run JSON under `simulations/<chainId>/`; broadcast / resume JSON under `deployments/<chainId>/` only |
 | D7 | Name: any string (aligned with NIP-01 kind 0 `name`); uniqueness + reserved names only on this NFT |
 | D8 | `mintFee` configurable; default `0` |
 | D9 | On-chain Nostr verify uses compact struct hash, not NIP-01 JSON |
@@ -255,7 +255,7 @@ PostOp context: `0x00` → bootstrap pool, `0x01` → global pool.
 
 ## 7. Deploy & ops
 
-See [README](../README.md). Artifacts: `deployments/<chainId>/full-system.json` (broadcast only).
+See [README](../README.md). Artifacts: `deployments/<chainId>/full-system.json` (broadcast / resume); dry-run writes `simulations/<chainId>/`.
 
 **JSON fields:**
 
