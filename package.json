@@ -12,6 +12,7 @@
   "scripts": {
     "build": "forge build",
     "build:optimized": "FOUNDRY_PROFILE=optimized forge build",
+    "check:factory-metadata": "python3 script/check_factory_metadata.py",
     "coverage": "forge coverage --report summary --report lcov --match-path 'test/{unit,integration}/*' --no-match-coverage 'script/' --no-match-test test_Membership_PerformsTwoSloads",
     "deploy:arbitrum": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url arbitrum --account $ARBITRUM_DEPLOYER_NAME --broadcast --slow --gas-estimate-multiplier 1000 --chain arbitrum -vvvvv && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url arbitrum --chain arbitrum -vvvv'",
     "deploy:mainnet": "bash -c 'source .env && forge script DeployUsernameSystem --rpc-url mainnet --account $MAINNET_DEPLOYER_NAME --broadcast --slow --gas-estimate-multiplier 1000 --chain mainnet -vvvvv && FOUNDRY_PROFILE=verify forge script VerifyDeploy --rpc-url mainnet --chain mainnet -vvvv'",
