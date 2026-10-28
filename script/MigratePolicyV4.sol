@@ -36,7 +36,7 @@ contract MigratePolicyV4 is DeploymentArtifacts {
 
     if (_deployer == PactoProtocolRegistry(_registry).owner()) {
       PolicySeeding.seedMemberPolicyV4(
-        _policyRegistry, _usernameNft, PolicyTargetResolver.resolveFactoryTargets(_config)
+        _policyRegistry, _usernameNft, PolicyTargetResolver.resolveRequiredFactoryTargets(_config)
       );
     }
     vm.stopBroadcast();
