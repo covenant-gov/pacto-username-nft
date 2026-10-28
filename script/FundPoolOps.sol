@@ -9,9 +9,11 @@ import {DeploymentArtifacts} from 'script/DeploymentArtifacts.sol';
 import {IUsernameSystemFactory} from 'interfaces/IUsernameSystemFactory.sol';
 
 import {stdJson} from 'forge-std/StdJson.sol';
-import {console} from 'forge-std/console.sol';
+import {console2} from 'forge-std/console2.sol';
 
 /// @notice Deposits ETH into an already-deployed global pool and bootstrap mint pool
+/// @dev Skip independently per pool when `spendablePoolWei >=` the env amount (or env is 0).
+///      A short pool sends the env amount (not a deficit top-up). Both skip → no broadcast.
 contract FundPoolOps is DeploymentArtifacts {
   using stdJson for string;
 
@@ -37,33 +39,76 @@ contract FundPoolOps is DeploymentArtifacts {
     uint256 _bootstrapWei = vm.envOr('BOOTSTRAP_POOL_DEPOSIT_WEI', _DEFAULT_DEPOSIT_WEI);
     if (_globalWei == 0 && _bootstrapWei == 0) revert ZeroPoolDeposits();
 
-    uint256 _globalBefore = _global.spendablePoolWei();
-    uint256 _bootstrapBefore = _bootstrap.spendablePoolWei();
+    _fund(_factory, _global, _bootstrap, _globalWei, _bootstrapWei, true);
+  }
 
-    console.log('UsernameSystemFactory:', address(_factory));
-    console.log('GlobalSponsorPool:', address(_global));
-    console.log('BootstrapMintPool:', address(_bootstrap));
-    console.log('Global deposit (wei):', _globalWei);
-    console.log('Bootstrap deposit (wei):', _bootstrapWei);
-    console.log('Global spendable before (wei):', _globalBefore);
-    console.log('Bootstrap spendable before (wei):', _bootstrapBefore);
+  /// @notice Returns true when this pool should not receive a deposit
+  /// @param spendable The live `spendablePoolWei`
+  /// @param target The env/default deposit amount; 0 means leave this pool alone
+  /// @return skip True when the deposit transfer should be skipped
+  function _shouldSkipPoolDeposit(uint256 spendable, uint256 target) internal pure returns (bool skip) {
+    skip = target == 0 || spendable >= target;
+  }
 
-    vm.startBroadcast();
-    if (_globalWei > 0) _global.deposit{value: _globalWei}();
-    if (_bootstrapWei > 0) _bootstrap.deposit{value: _bootstrapWei}();
-    vm.stopBroadcast();
+  /// @notice Deposits into each pool that is below its env target
+  /// @param factory The username system factory (logged only)
+  /// @param global The live global sponsor pool
+  /// @param bootstrap The live bootstrap mint pool
+  /// @param globalWei The global pool target (and amount sent when short)
+  /// @param bootstrapWei The bootstrap pool target (and amount sent when short)
+  /// @param withBroadcast True for forge-script broadcast; false for unit tests
+  function _fund(
+    IUsernameSystemFactory factory,
+    GlobalSponsorPool global,
+    BootstrapMintPool bootstrap,
+    uint256 globalWei,
+    uint256 bootstrapWei,
+    bool withBroadcast
+  ) internal {
+    uint256 _globalBefore = global.spendablePoolWei();
+    uint256 _bootstrapBefore = bootstrap.spendablePoolWei();
+    bool _skipGlobal = _shouldSkipPoolDeposit(_globalBefore, globalWei);
+    bool _skipBootstrap = _shouldSkipPoolDeposit(_bootstrapBefore, bootstrapWei);
 
-    uint256 _globalAfter = _global.spendablePoolWei();
-    uint256 _bootstrapAfter = _bootstrap.spendablePoolWei();
-    if (_globalWei > 0) {
-      require(_globalAfter >= _globalBefore + _globalWei, 'fund: global pool too low');
+    uint256 _globalAdded;
+    uint256 _bootstrapAdded;
+    if (!_skipGlobal || !_skipBootstrap) {
+      if (withBroadcast) vm.startBroadcast();
+      if (!_skipGlobal) {
+        global.deposit{value: globalWei}();
+        _globalAdded = globalWei;
+      }
+      if (!_skipBootstrap) {
+        bootstrap.deposit{value: bootstrapWei}();
+        _bootstrapAdded = bootstrapWei;
+      }
+      if (withBroadcast) vm.stopBroadcast();
     }
-    if (_bootstrapWei > 0) {
-      require(_bootstrapAfter >= _bootstrapBefore + _bootstrapWei, 'fund: bootstrap pool too low');
+
+    uint256 _globalAfter = global.spendablePoolWei();
+    uint256 _bootstrapAfter = bootstrap.spendablePoolWei();
+    if (globalWei > 0) {
+      require(_globalAfter >= globalWei, 'fund: global pool too low');
+    }
+    if (bootstrapWei > 0) {
+      require(_bootstrapAfter >= bootstrapWei, 'fund: bootstrap pool too low');
     }
 
-    console.log('Global spendable after (wei):', _globalAfter);
-    console.log('Bootstrap spendable after (wei):', _bootstrapAfter);
+    if (_skipGlobal && globalWei > 0) {
+      console2.log('Global pool skipped (already >= target)');
+    }
+    if (_skipBootstrap && bootstrapWei > 0) {
+      console2.log('Bootstrap pool skipped (already >= target)');
+    }
+    console2.log('UsernameSystemFactory:', address(factory));
+    console2.log('GlobalSponsorPool:', address(global));
+    console2.log('BootstrapMintPool:', address(bootstrap));
+    console2.log(string.concat('Global deposit added (wei): ', vm.toString(_globalAdded)));
+    console2.log(string.concat('Bootstrap deposit added (wei): ', vm.toString(_bootstrapAdded)));
+    console2.log(string.concat('Global spendable before (wei): ', vm.toString(_globalBefore)));
+    console2.log(string.concat('Bootstrap spendable before (wei): ', vm.toString(_bootstrapBefore)));
+    console2.log(string.concat('Global spendable after (wei): ', vm.toString(_globalAfter)));
+    console2.log(string.concat('Bootstrap spendable after (wei): ', vm.toString(_bootstrapAfter)));
   }
 
   /// @notice Thrown when deployments/<chainId>/full-system.json is missing (run pnpm deploy:sepolia first)

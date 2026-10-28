@@ -10,7 +10,7 @@ import {PolicySeeding} from 'script/PolicySeeding.sol';
 import {PolicyTargetResolver} from 'script/PolicyTargetResolver.sol';
 
 import {stdJson} from 'forge-std/StdJson.sol';
-import {console} from 'forge-std/console.sol';
+import {console2} from 'forge-std/console2.sol';
 
 /// @notice Seeds policy v4 targets on a newly deployed SponsorPolicyRegistry for alpha migration
 contract MigratePolicyV4 is DeploymentArtifacts {
@@ -41,11 +41,11 @@ contract MigratePolicyV4 is DeploymentArtifacts {
     }
     vm.stopBroadcast();
 
-    console.log('PactoProtocolRegistry:', _registry);
-    console.log('SponsorPolicyRegistry:', _policy);
-    console.log('Username NFT:', _usernameNft);
-    console.log('Policy version:', _policyRegistry.policyVersion());
-    console.log('Deployer:', _deployer);
+    console2.log('PactoProtocolRegistry:', _registry);
+    console2.log('SponsorPolicyRegistry:', _policy);
+    console2.log('Username NFT:', _usernameNft);
+    console2.log(string.concat('Policy version: ', vm.toString(_policyRegistry.policyVersion())));
+    console2.log('Deployer:', _deployer);
   }
 
   /// @notice Resolves the policy registry from env or sponsor-policy-registry.json
