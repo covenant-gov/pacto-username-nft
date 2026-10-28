@@ -95,6 +95,7 @@ abstract contract DeploymentArtifacts is Script {
   /// @param artifact The deployment addresses and metadata
   function _writeFullSystemJson(FullSystemArtifact memory artifact) internal {
     if (!_shouldWriteDeploymentJson()) return;
+    if (artifact.nostrClaimLink == address(0)) revert MissingNostrClaimLink();
 
     string memory _key = 'username_full_system';
     vm.serializeUint(_key, 'chainId', block.chainid);
@@ -141,19 +142,36 @@ abstract contract DeploymentArtifacts is Script {
     _writeDeploymentJson(_json, 'sponsor-policy-registry.json');
   }
 
-  /// @notice Reads NostrClaimLink from forge broadcast libraries after deploy
+  /// @notice Reads NostrClaimLink from forge broadcast libraries, then CREATE2 transactions
   /// @return link The library address or zero when unavailable
   function _readNostrClaimLinkFromBroadcast() internal view returns (address link) {
     string memory path =
       string.concat('broadcast/DeployUsernameSystem.sol/', vm.toString(block.chainid), '/run-latest.json');
     try vm.readFile(path) returns (string memory raw) {
+      return _parseNostrClaimLinkFromBroadcastJson(raw);
+    } catch {}
+  }
+
+  /// @notice Parses NostrClaimLink from a forge broadcast JSON body
+  /// @dev Prefer `.libraries`; mid-script that array is often empty, so fall back to CREATE2 txs
+  /// @param raw The broadcast run-latest.json contents
+  /// @return link The library address or zero when unavailable
+  function _parseNostrClaimLinkFromBroadcastJson(string memory raw) internal view returns (address link) {
+    if (vm.keyExistsJson(raw, '.libraries')) {
       string[] memory libs = raw.readStringArray('.libraries');
       for (uint256 i; i < libs.length; ++i) {
         if (_containsSubstring(libs[i], 'NostrClaimLink')) {
           return vm.parseAddress(_suffixAfterLastColon(libs[i]));
         }
       }
-    } catch {}
+    }
+
+    for (uint256 i;; ++i) {
+      string memory nameKey = string.concat('.transactions[', vm.toString(i), '].contractName');
+      if (!vm.keyExistsJson(raw, nameKey)) break;
+      if (keccak256(bytes(raw.readString(nameKey))) != keccak256(bytes('NostrClaimLink'))) continue;
+      return raw.readAddress(string.concat('.transactions[', vm.toString(i), '].contractAddress'));
+    }
   }
 
   function _containsSubstring(string memory haystack, string memory needle) internal pure returns (bool) {
@@ -190,4 +208,7 @@ abstract contract DeploymentArtifacts is Script {
 
   /// @notice Thrown when no EIP-7702 allowlist address is configured
   error Zero7702Allowlist();
+
+  /// @notice Thrown when NostrClaimLink cannot be resolved for a deployment artifact write
+  error MissingNostrClaimLink();
 }
