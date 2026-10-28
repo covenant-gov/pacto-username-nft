@@ -13,7 +13,7 @@ import {PolicySeeding} from 'script/PolicySeeding.sol';
 import {PolicyTargetResolver} from 'script/PolicyTargetResolver.sol';
 
 import {stdJson} from 'forge-std/StdJson.sol';
-import {console} from 'forge-std/console.sol';
+import {console2} from 'forge-std/console2.sol';
 
 /// @notice Migrates the protocol registry to a coherent paymaster generation
 contract UpdateProtocolRegistry is DeploymentArtifacts {
@@ -94,17 +94,19 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
 
   /// @notice Logs the live registry slots
   function _logRegistry(PactoProtocolRegistry registry) internal view {
-    console.log('PactoProtocolRegistry:', address(registry));
-    console.log('usernameNft:', registry.usernameNft());
-    console.log('paymaster:', registry.paymaster());
-    console.log('pool:', registry.pool());
-    console.log('bootstrapPool:', registry.bootstrapPool());
-    console.log('policy:', registry.policy());
-    console.log('bootstrapPolicy:', registry.bootstrapPolicy());
-    console.log('entryPoint:', registry.entryPoint());
-    console.log('allowed7702Implementation:', registry.allowed7702Implementation());
-    console.log('eip7702Enabled:', registry.eip7702Enabled());
-    console.log('policyVersion:', SponsorPolicyRegistry(registry.policy()).policyVersion());
+    console2.log('PactoProtocolRegistry:', address(registry));
+    console2.log('usernameNft:', registry.usernameNft());
+    console2.log('paymaster:', registry.paymaster());
+    console2.log('pool:', registry.pool());
+    console2.log('bootstrapPool:', registry.bootstrapPool());
+    console2.log('policy:', registry.policy());
+    console2.log('bootstrapPolicy:', registry.bootstrapPolicy());
+    console2.log('entryPoint:', registry.entryPoint());
+    console2.log('allowed7702Implementation:', registry.allowed7702Implementation());
+    console2.log('eip7702Enabled:', registry.eip7702Enabled());
+    console2.log(
+      string.concat('policyVersion: ', vm.toString(SponsorPolicyRegistry(registry.policy()).policyVersion()))
+    );
   }
 
   /// @notice Builds the refreshed full-system artifact from the live registry
