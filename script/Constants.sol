@@ -24,14 +24,14 @@ library Constants {
   /// @notice ERC-4337 EntryPoint v0.7 on supported chains
   address internal constant ENTRY_POINT_V07 = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
-  /// @notice PactoSimple7702Account on Sepolia (pacto-squad-sponsor deployments)
-  address internal constant SEPOLIA_7702_ACCOUNT = 0x33F920B5aF6c527f63BD6B24d58Dccd698b2DC60;
+  /// @notice PactoSimple7702Account on Sepolia (Oct 2026 conductor stack.json)
+  address internal constant SEPOLIA_7702_ACCOUNT = 0x2E9156deE65d7946305C334824e2648Ff9128f45;
 
-  /// @notice pacto-gov Nave Pirata factory on Sepolia
-  address internal constant SEPOLIA_NAVE_PIRATA_FACTORY = 0xba54955cF9eab7F546c3a1c1fCE2584996626ef0;
+  /// @notice pacto-gov Nave Pirata factory on Sepolia (Oct 2026 conductor stack.json)
+  address internal constant SEPOLIA_NAVE_PIRATA_FACTORY = 0x97d2dbA09FCA62f3E634d850aB7d8fd7AdC7d9E4;
 
-  /// @notice pacto-squad-sponsor factory on Sepolia
-  address internal constant SEPOLIA_SQUAD_SPONSOR_FACTORY = 0x9F6b1936e1817A074033591bb55DC65CBB29e4d7;
+  /// @notice pacto-squad-sponsor factory on Sepolia (Oct 2026 conductor stack.json)
+  address internal constant SEPOLIA_SQUAD_SPONSOR_FACTORY = 0x280755769367DDD108020eEF353A6dF0f8355f36;
 
   /// @notice Safe proxy factory on Sepolia
   address internal constant SEPOLIA_SAFE_PROXY_FACTORY = 0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67;
