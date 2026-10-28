@@ -43,7 +43,9 @@ contract UpdateProtocolRegistry is DeploymentArtifacts {
       if (_next.policy != _oldPolicy) {
         Constants.ChainConfig memory _config = Constants.getConfig(block.chainid);
         PolicySeeding.seedMemberPolicyV4(
-          SponsorPolicyRegistry(_next.policy), _next.usernameNft, PolicyTargetResolver.resolveFactoryTargets(_config)
+          SponsorPolicyRegistry(_next.policy),
+          _next.usernameNft,
+          PolicyTargetResolver.resolveRequiredFactoryTargets(_config)
         );
       }
     }

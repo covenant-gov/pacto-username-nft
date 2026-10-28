@@ -84,6 +84,10 @@ cast send $POOL "deposit()" --value 1ether --rpc-url $SEPOLIA_RPC --private-key 
 
 `simulate-*` never signs or pays gas. Use `pnpm deploy:sepolia` (with `--broadcast`) to unlock the keystore, deploy on-chain, and produce a fundable artifact. If `FOUNDRY_ETH_KEYSTORE_PASSWORD` is set in your environment, forge skips the interactive password prompt.
 
+`deploy:sepolia`, `deploy:mainnet`, `deploy:arbitrum`, and `deploy:nft:sepolia` pass `--slow --gas-estimate-multiplier 1000`. `DeployUsernameSystem` CREATE2-deploys `NostrClaimLink` via Arachnid (`salt = 0` → `0x7D7EA6cb…`), then `CREATE`s the factory; `DeployUsernameNft` CREATE2-deploys the same library before the NFT. Foundry’s prague estimate for that CREATE2 is ~514k; Sepolia `eth_estimateGas` is ~4.0M, so 1000% sets a ~5.1M **limit**. The factory estimate is ~7.58M → ~75.8M limit. **You pay `gasUsed × price`, not the limit**; unused gas is refunded. `--slow` waits for the library receipt before the factory tx.
+
+`forge script --gas-limit` is the script-EVM / block cap, **not** the signed tx gas — do not use it to pad CREATE2. Broadcast tx gas is `--gas-estimate-multiplier` (percent of Foundry’s estimate).
+
 ## License
 
 MIT — see [LICENSE](LICENSE)

@@ -14,6 +14,8 @@ evm_version = 'prague'
 libs = ['node_modules']
 optimizer_runs = 10_000
 via_ir = true
+use_literal_content = true
+bytecode_hash = 'ipfs'
 fs_permissions = [
   { access = 'read-write', path = './deployments' },
   { access = 'read-write', path = './simulations' },

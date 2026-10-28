@@ -12,10 +12,12 @@ import {IUsernameSystemFactory} from 'interfaces/IUsernameSystemFactory.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {Script} from 'forge-std/Script.sol';
 import {stdJson} from 'forge-std/StdJson.sol';
+import {Vm} from 'forge-std/Vm.sol';
 import {console} from 'forge-std/console.sol';
 
 /// @notice Etherscan verification for username system contracts from deployments/<chainId>/full-system.json
 /// @dev Requires FOUNDRY_PROFILE=verify (ffi = true). Run after DeployUsernameSystem.
+///      `tryFfi` continues past a factory reject so children still submit; reverts at the end if any failed.
 contract VerifyDeploy is Script {
   using stdJson for string;
 
@@ -28,6 +30,9 @@ contract VerifyDeploy is Script {
   string internal constant _BOOTSTRAP_POLICY = 'src/contracts/BootstrapClaimPolicy.sol:BootstrapClaimPolicy';
   string internal constant _PAYMASTER = 'src/contracts/PactoGlobalPaymaster.sol:PactoGlobalPaymaster';
   string internal constant _NOSTR_CLAIM_LINK = 'src/contracts/utils/NostrClaimLink.sol:NostrClaimLink';
+
+  /// @notice True when any `forge verify-contract` call returned a non-zero exit
+  bool internal _verifyFailed;
 
   /// @notice Loaded full-system deployment addresses for verification
   /// @param entryPoint The ERC-4337 EntryPoint
@@ -72,7 +77,7 @@ contract VerifyDeploy is Script {
     _verify(d.pool, _POOL, chain, abi.encode(IPactoProtocolRegistry(d.registry)), '');
     _verify(d.bootstrapPool, _BOOTSTRAP_POOL, chain, abi.encode(IPactoProtocolRegistry(d.registry)), '');
     _verify(d.policy, _POLICY, chain, abi.encode(d.owner), '');
-    _verify(d.bootstrapPolicy, _BOOTSTRAP_POLICY, chain, abi.encode(IPactoProtocolRegistry(d.registry)), '');
+    _verify(d.bootstrapPolicy, _BOOTSTRAP_POLICY, chain, abi.encode(IPactoUsernameNFT(d.nft)), '');
     _verify(
       d.paymaster,
       _PAYMASTER,
@@ -89,6 +94,8 @@ contract VerifyDeploy is Script {
       ),
       ''
     );
+
+    if (_verifyFailed) revert VerifyFailed();
   }
 
   function _loadAndAssert() internal view returns (Deployed memory d) {
@@ -155,6 +162,7 @@ contract VerifyDeploy is Script {
     } catch {}
   }
 
+  /// @notice Submits one `forge verify-contract`; logs and continues on a non-zero exit
   function _verify(
     address addr,
     string memory contractId,
@@ -181,7 +189,13 @@ contract VerifyDeploy is Script {
       inputs[12] = '--libraries';
       inputs[13] = libraries;
     }
-    console.log(string(vm.ffi(inputs)));
+    Vm.FfiResult memory result = vm.tryFfi(inputs);
+    if (result.stdout.length != 0) console.log(string(result.stdout));
+    if (result.exitCode != 0) {
+      _verifyFailed = true;
+      console.log('verify-contract failed', contractId, addr);
+      if (result.stderr.length != 0) console.log(string(result.stderr));
+    }
   }
 
   function _chainSlug() internal view returns (string memory) {
@@ -226,4 +240,7 @@ contract VerifyDeploy is Script {
 
   /// @notice Thrown when the chain is unsupported
   error UnsupportedChain(uint256 chainId);
+
+  /// @notice Thrown when one or more forge verify-contract calls failed
+  error VerifyFailed();
 }
