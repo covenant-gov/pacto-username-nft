@@ -10,8 +10,8 @@ contract UnitConstants is Test {
     assertEq(_config.chainId, 11_155_111);
     assertEq(_config.entryPoint, Constants.ENTRY_POINT_V07);
     assertEq(_config.allowed7702Implementation, 0x2E9156deE65d7946305C334824e2648Ff9128f45);
-    assertEq(_config.navePirataFactory, 0x97d2dbA09FCA62f3E634d850aB7d8fd7AdC7d9E4);
-    assertEq(_config.squadSponsorFactory, 0x280755769367DDD108020eEF353A6dF0f8355f36);
+    assertEq(_config.navePirataFactory, 0x309A529D1735Fd0c416ae42c1d1A587bF464706E);
+    assertEq(_config.squadSponsorFactory, 0xEd1dAd3d42159CA504e86151beAfBce6c86f86ae);
     assertEq(_config.safeProxyFactory, 0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67);
     assertEq(_config.allowed7702Implementation, Constants.SEPOLIA_7702_ACCOUNT);
     assertEq(_config.navePirataFactory, Constants.SEPOLIA_NAVE_PIRATA_FACTORY);
