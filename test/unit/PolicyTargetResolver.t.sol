@@ -8,8 +8,8 @@ import {PolicySeeding} from 'script/PolicySeeding.sol';
 import {PolicyTargetResolver} from 'script/PolicyTargetResolver.sol';
 
 contract UnitPolicyTargetResolver is Test {
-  address internal constant _RETIRED_NAVE = 0xba54955cF9eab7F546c3a1c1fCE2584996626ef0;
-  address internal constant _RETIRED_SQUAD = 0x9F6b1936e1817A074033591bb55DC65CBB29e4d7;
+  address internal constant _RETIRED_NAVE = 0x97d2dbA09FCA62f3E634d850aB7d8fd7AdC7d9E4;
+  address internal constant _RETIRED_SQUAD = 0x280755769367DDD108020eEF353A6dF0f8355f36;
 
   /// @dev Sequential: `vm.setEnv` is process-global and races under parallel tests
   function test_PolicyTargetResolver_FailClosed() external {
