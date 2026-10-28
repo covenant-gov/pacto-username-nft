@@ -9,8 +9,9 @@ import {IPactoUsernameNFT} from 'interfaces/IPactoUsernameNFT.sol';
 import {ISponsorPolicy} from 'interfaces/ISponsorPolicy.sol';
 import {IUsernameSystemFactory} from 'interfaces/IUsernameSystemFactory.sol';
 
+import {DeploymentArtifacts} from 'script/DeploymentArtifacts.sol';
+
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {Script} from 'forge-std/Script.sol';
 import {stdJson} from 'forge-std/StdJson.sol';
 import {Vm} from 'forge-std/Vm.sol';
 import {console} from 'forge-std/console.sol';
@@ -18,7 +19,7 @@ import {console} from 'forge-std/console.sol';
 /// @notice Etherscan verification for username system contracts from deployments/<chainId>/full-system.json
 /// @dev Requires FOUNDRY_PROFILE=verify (ffi = true). Run after DeployUsernameSystem.
 ///      `tryFfi` continues past a factory reject so children still submit; reverts at the end if any failed.
-contract VerifyDeploy is Script {
+contract VerifyDeploy is DeploymentArtifacts {
   using stdJson for string;
 
   string internal constant _FACTORY = 'src/contracts/UsernameSystemFactory.sol:UsernameSystemFactory';
@@ -135,7 +136,7 @@ contract VerifyDeploy is Script {
     require(d.nostrClaimLink.code.length > 0, 'verify: NostrClaimLink has no code');
   }
 
-  /// @notice Resolves NostrClaimLink from artifact, then broadcast libraries, then env
+  /// @notice Resolves NostrClaimLink from artifact, then broadcast libraries/txs, then env
   function _resolveNostrClaimLink(string memory json) internal view returns (address link) {
     if (vm.keyExistsJson(json, '.nostrClaimLink')) {
       link = json.readAddress('.nostrClaimLink');
@@ -146,20 +147,6 @@ contract VerifyDeploy is Script {
     if (link != address(0)) return link;
 
     link = vm.envOr('NOSTR_CLAIM_LINK', address(0));
-  }
-
-  /// @notice Reads linked NostrClaimLink address from forge broadcast libraries
-  function _readNostrClaimLinkFromBroadcast() internal view returns (address link) {
-    string memory path =
-      string.concat('broadcast/DeployUsernameSystem.sol/', vm.toString(block.chainid), '/run-latest.json');
-    try vm.readFile(path) returns (string memory raw) {
-      string[] memory libs = raw.readStringArray('.libraries');
-      for (uint256 i; i < libs.length; ++i) {
-        if (_contains(libs[i], 'NostrClaimLink')) {
-          return vm.parseAddress(_suffixAfterLastColon(libs[i]));
-        }
-      }
-    } catch {}
   }
 
   /// @notice Submits one `forge verify-contract`; logs and continues on a non-zero exit
@@ -204,38 +191,6 @@ contract VerifyDeploy is Script {
     if (id == 1) return 'mainnet';
     if (id == 42_161) return 'arbitrum';
     revert UnsupportedChain(id);
-  }
-
-  function _contains(string memory haystack, string memory needle) internal pure returns (bool) {
-    bytes memory h = bytes(haystack);
-    bytes memory n = bytes(needle);
-    if (n.length > h.length) return false;
-    for (uint256 i; i <= h.length - n.length; ++i) {
-      bool matched = true;
-      for (uint256 j; j < n.length; ++j) {
-        if (h[i + j] != n[j]) {
-          matched = false;
-          break;
-        }
-      }
-      if (matched) return true;
-    }
-    return false;
-  }
-
-  function _suffixAfterLastColon(string memory s) internal pure returns (string memory) {
-    bytes memory b = bytes(s);
-    uint256 last = type(uint256).max;
-    for (uint256 i; i < b.length; ++i) {
-      if (b[i] == ':') last = i;
-    }
-    require(last != type(uint256).max && last + 1 < b.length, 'verify: bad library entry');
-    uint256 start = last + 1;
-    bytes memory out = new bytes(b.length - start);
-    for (uint256 i; i < out.length; ++i) {
-      out[i] = b[start + i];
-    }
-    return string(out);
   }
 
   /// @notice Thrown when the chain is unsupported

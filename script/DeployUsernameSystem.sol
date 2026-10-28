@@ -37,6 +37,7 @@ contract DeployUsernameSystem is DeploymentArtifacts {
     vm.stopBroadcast();
 
     address _nostrClaimLink = _readNostrClaimLinkFromBroadcast();
+    if (_shouldWriteDeploymentJson() && _nostrClaimLink == address(0)) revert MissingNostrClaimLink();
     _logDeployment(_config.entryPoint, _allowed7702, _owner, _nostrClaimLink);
 
     FullSystemArtifact memory _artifact;
