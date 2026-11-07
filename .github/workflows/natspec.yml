@@ -2,6 +2,9 @@ name: Natspec Check
 
 on: workflow_dispatch
 
+permissions:
+  contents: read
+
 jobs:
   natspec:
     name: Run Lintspec
@@ -9,10 +12,12 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: install-tools
         uses: ./.github/workflows/install-tools
 
       - name: Install and run Lintspec
-        uses: beeb/lintspec@v0.6.0
+        uses: beeb/lintspec@b177eac0f1eec0b5ff7de58b87cb8d69b13d04c6 # v0.6.0
