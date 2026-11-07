@@ -3,6 +3,10 @@ name: Coverage Check
 on:
   pull_request:
 
+# PR trust boundary: read contents by default; write only for same-repo coverage comments.
+permissions:
+  contents: read
+
 env:
   COVERAGE_SENSITIVITY_PERCENT: 1
 
@@ -16,14 +20,16 @@ jobs:
       base-coverage: ${{ steps.export-base.outputs.base-coverage }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: install-tools
         uses: ./.github/workflows/install-tools
 
       - name: Restore base coverage cache
         id: cache-base
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: total-coverage.txt
           # v2: Foundry LCOV needs ignore-errors on newer ubuntu lcov; prior cache could store a bad base %.
@@ -35,7 +41,7 @@ jobs:
 
       - name: Setup LCOV (for base coverage summary)
         if: steps.cache-base.outputs.cache-hit != 'true'
-        uses: hrishikesh-kadam/setup-lcov@v1
+        uses: hrishikesh-kadam/setup-lcov@6c1aa0cc9e1c02f9f58f01ac599f1064ccc83470 # v1.1.0
 
       - name: Configure LCOV for Foundry traces
         if: steps.cache-base.outputs.cache-hit != 'true'
@@ -69,32 +75,34 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+        uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
         with:
           version: stable
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 9
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20.x
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Run current branch coverage
         run: pnpm coverage
 
       - name: Setup LCOV (for current PR coverage summary)
-        uses: hrishikesh-kadam/setup-lcov@v1
+        uses: hrishikesh-kadam/setup-lcov@6c1aa0cc9e1c02f9f58f01ac599f1064ccc83470 # v1.1.0
 
       # report-lcov only passes ignore-errors to genhtml/merge; summarize/list still call bare lcov.
       - name: Configure LCOV for Foundry traces
@@ -118,7 +126,7 @@ jobs:
       - name: Create a comment on the PR with the current branch coverage
         id: new-coverage
         if: hashFiles('lcov.info') != '' && github.event.pull_request.head.repo.full_name == github.repository
-        uses: zgosalvez/github-actions-report-lcov@v5
+        uses: zgosalvez/github-actions-report-lcov@8ead3c903cefbc389528f5e032e793a5d0e5b626 # v5.0.2
         with:
           coverage-files: lcov.info
           github-token: ${{ github.token }}

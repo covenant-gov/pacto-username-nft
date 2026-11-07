@@ -2,6 +2,10 @@ name: Canary Release
 
 on: workflow_dispatch
 
+# Manual canary path only. Publishing remains disabled (if: false). Separate from PR CI trust.
+permissions:
+  contents: read
+
 jobs:
   export:
     name: Generate Interfaces And Contracts
@@ -20,7 +24,9 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: install-tools
         uses: ./.github/workflows/install-tools
@@ -32,7 +38,7 @@ jobs:
         run: pnpm version '0.0.0-${GITHUB_SHA::8}' --no-git-tag-version
 
       - name: Export Solidity - Export Type ${{ matrix.export_type }}
-        uses: defi-wonderland/solidity-exporter-action@v2.1.0
+        uses: defi-wonderland/solidity-exporter-action@3df3ab476e32e604659900c2f48dcdfb55b1f37b # v2.1.0
         with:
           package_name: ${{ env.NPM_PACKAGE_NAME }}
           out: 'out'
